@@ -46,11 +46,19 @@ CREATE SCHEMA IF NOT EXISTS fraud_demo;
 CREATE SCHEMA IF NOT EXISTS fraud_demo_public;
 CREATE SCHEMA IF NOT EXISTS fraud_ml;
 CREATE SCHEMA IF NOT EXISTS fraud_rag;
+CREATE SCHEMA IF NOT EXISTS fraud_demo_live;
 
 CREATE USER IF NOT EXISTS 'app_readonly'@'%' IDENTIFIED BY 'USE_UM_SECRET_DO_VAULT';
 GRANT SELECT, SHOW VIEW ON fraud_demo_public.* TO 'app_readonly'@'%';
+GRANT EXECUTE ON PROCEDURE sys.NL_SQL TO 'app_readonly'@'%';
+GRANT EXECUTE ON PROCEDURE sys.ML_RAG TO 'app_readonly'@'%';
 SHOW GRANTS FOR 'app_readonly'@'%';
 ```
+
+O usuário do chat não escreve em lugar algum. Para a futura simulação, crie um
+usuário de serviço **separado**, limitado a `fraud_demo_live` e às rotinas de
+predição que a sua versão exigir. Nunca entregue esse usuário ao navegador nem
+conceda acesso a `fraud_demo` ou `fraud_ml`.
 
 ### 2. Baixar e importar a base Sparkov
 
@@ -164,6 +172,13 @@ CREATE TABLE fraud_ml.train_final AS
 SELECT * FROM fraud_ml.features_b1 WHERE source_split='train';
 CREATE TABLE fraud_ml.test_final AS
 SELECT * FROM fraud_ml.features_b1 WHERE source_split='test';
+
+CREATE TABLE fraud_ml.train_development AS
+SELECT * FROM fraud_ml.features_b1
+WHERE source_split='train' AND transaction_timestamp < '2020-03-06 07:16:43';
+CREATE TABLE fraud_ml.train_validation AS
+SELECT * FROM fraud_ml.features_b1
+WHERE source_split='train' AND transaction_timestamp >= '2020-03-06 07:16:43';
 ```
 
 Dentro de `train`, separe desenvolvimento e validação por tempo. Nunca escolha
@@ -172,29 +187,71 @@ threshold olhando o split `test`.
 ### 6. Treinar, avaliar e carregar o modelo
 
 ```sql
-SET @model='fraud_xgb_b1_v1';
+-- Modelo de desenvolvimento: não viu o período de validação.
+SET @model_dev='fraud_xgb_b1_dev_v1';
 CALL sys.ML_TRAIN(
-  'fraud_ml.train_final', 'is_fraud',
+  'fraud_ml.train_development', 'is_fraud',
   JSON_OBJECT(
     'task','classification',
     'model_list',JSON_ARRAY('XGBClassifier'),
     'optimization_metric','f1',
-    'exclude_column_list',JSON_ARRAY('transaction_id','transaction_timestamp')
+    'exclude_column_list',JSON_ARRAY(
+      'transaction_id','transaction_timestamp','source_split'
+    )
   ),
-  @model
+  @model_dev
 );
 ```
 
-Faça `ML_PREDICT_TABLE` sobre a validação e compare thresholds com precisão,
-recall, F1, ROC AUC, alertas e matriz de confusão. O threshold de referência da
-demo é `0.27`, mas não deve ser copiado sem validação local. Acurácia isolada
-não é adequada para uma classe positiva perto de 0,5%.
+Faça a predição em lote sobre a validação e armazene o resultado:
+
+```sql
+DROP TABLE IF EXISTS fraud_ml.validation_predictions;
+CALL sys.ML_PREDICT_TABLE(
+  'fraud_ml.train_validation',
+  @model_dev,
+  'fraud_ml.validation_predictions',
+  NULL
+);
+
+SELECT transaction_id, is_fraud AS actual_is_fraud,
+       CAST(JSON_UNQUOTE(JSON_EXTRACT(ml_results,'$.probabilities."1"')) AS DECIMAL(12,10))
+         AS fraud_probability
+FROM fraud_ml.validation_predictions
+LIMIT 10;
+```
+
+Compare thresholds com precisão, recall, F1, ROC AUC, alertas e matriz de
+confusão. O threshold de referência da demo é `0.27`, mas não deve ser copiado
+sem validação local. Acurácia isolada não é adequada para uma classe positiva
+perto de 0,5%. Depois de congelar o threshold, treine o modelo final com todo
+`train_final` e avalie-o **uma única vez** em `test_final`:
+
+```sql
+SET @model='fraud_xgb_b1_v1';
+CALL sys.ML_TRAIN(
+  'fraud_ml.train_final', 'is_fraud',
+  JSON_OBJECT(
+    'task','classification', 'model_list',JSON_ARRAY('XGBClassifier'),
+    'optimization_metric','f1',
+    'exclude_column_list',JSON_ARRAY(
+      'transaction_id','transaction_timestamp','source_split'
+    )
+  ),
+  @model
+);
+
+DROP TABLE IF EXISTS fraud_ml.test_predictions;
+CALL sys.ML_PREDICT_TABLE(
+  'fraud_ml.test_final', @model, 'fraud_ml.test_predictions', NULL
+);
+```
 
 Carregue o modelo antes de prever:
 
 ```sql
 CALL sys.ML_MODEL_LOAD(@model,NULL);
-CALL sys.ML_PREDICT_ROW(
+SELECT sys.ML_PREDICT_ROW(
   JSON_OBJECT(
     'amount',1200.00,
     'amount_log',LN(1201.00),
@@ -202,9 +259,8 @@ CALL sys.ML_PREDICT_ROW(
     'transaction_hour',2,
     'customer_merchant_distance_km',15.8
   ),
-  @model,@prediction
-);
-SELECT @prediction;
+  @model,NULL
+) AS prediction;
 ```
 
 Para uma simulação ao vivo, use `ML_PREDICT_TABLE` em lotes e persista score,
@@ -223,6 +279,7 @@ SET @options=JSON_OBJECT(
   'table_name','modelo_b1_docs',
   'language','pt',
   'embed_model_id','multilingual-e5-small',
+  'formats',JSON_ARRAY('pdf'),
   'chunking',JSON_OBJECT('split_by','recursive')
 );
 CALL sys.VECTOR_STORE_LOAD(
@@ -231,8 +288,22 @@ CALL sys.VECTOR_STORE_LOAD(
 ```
 
 `VECTOR_STORE_LOAD` é assíncrono: acompanhe a query de status devolvida pela
-rotina. Quando terminar, teste `ML_RAG` e valide citações para perguntas sobre
-features, dataset, threshold, métricas e limitações.
+rotina. Ao finalizar, descubra o nome real criado — em cargas de PDF a tabela
+pode receber sufixo de formato — e só então consulte RAG:
+
+```sql
+SHOW TABLES FROM fraud_rag LIKE 'modelo_b1_docs%';
+SET @rag_options=JSON_OBJECT(
+  'vector_store',JSON_ARRAY('fraud_rag.NOME_REAL_DA_TABELA'),
+  'n_citations',5,
+  'model_options',JSON_OBJECT('model_id','meta.llama-3.3-70b-instruct')
+);
+CALL sys.ML_RAG('Quais features o modelo B1 usa?',@rag_answer,@rag_options);
+SELECT JSON_PRETTY(@rag_answer);
+```
+
+Valide citações para perguntas sobre features, dataset, threshold, métricas e
+limitações antes de apresentar RAG.
 
 ### 8. Habilitar NL to SQL com segurança
 
@@ -256,24 +327,96 @@ bloqueie DDL, DML, `CALL`, `LOAD`, comentários e múltiplas instruções; permi
 somente views da allowlist; imponha `LIMIT`, timeout e pool de conexões; execute
 como `app_readonly`; mostre o SQL ao visitante.
 
-### 9. Criar e publicar a aplicação com Codex/LLM
+### 9. Criar e publicar a aplicação inteiramente por prompts
 
-Crie a aplicação no seu repositório privado. Ela deve ter dashboard, chat de
-dados (`NL_SQL`), chat documental (`ML_RAG`), scoring em lote, tabela paginada
-de transações pontuadas e memória apenas da sessão. Use este prompt inicial:
+Crie a aplicação em um repositório **privado**, assistido por Codex/OpenCode.
+Não há código de aplicação neste repositório: o resultado esperado é que o
+participante o construa com os prompts abaixo, confirmando os testes a cada
+etapa.
+
+**Prompt 1 — dashboard**
 
 ```text
-Crie uma SPA React com backend Node.js para MySQL HeatWave. Use exclusivamente
-o usuário app_readonly e views fraud_demo_public. Implemente dashboard com
-agregações, chat de dados via NL_SQL com execute=false e validação rigorosa,
-chat documental via ML_RAG com citações e scoring em lote com as cinco features
-B1, persistido por run_id. Nunca exponha credenciais ou diga fraude confirmada
-para label/score. Inclua reset da sessão, timeout, rate limit e SQL auditável.
+Crie uma SPA React com backend Node.js para o laboratório MySQL HeatWave.
+Implemente uma única página de dashboard com valor movimentado, transações,
+ticket médio, registros rotulados, série temporal e recortes por categoria,
+estabelecimento e cidade. Consulte apenas views de fraud_demo_public com o
+usuário app_readonly; faça agregações em paralelo, carregamento inicial e
+tratamento de indisponibilidade. Não use mock quando o banco responder.
 ```
 
-Configure host, usuário, senha, TLS, modelos e Vector Store como segredos do
-runtime. Antes de publicar, faça smoke tests de dashboard, cluster, NL to SQL,
-RAG, score, reset e bloqueio de `DELETE`.
+**Prompt 2 — menu de simulação**
+
+```text
+Adicione o menu "Simular transações". Ele deve criar um run_id isolado e inserir
+50.000 eventos sintéticos coerentes com o dataset em aproximadamente 60 segundos,
+em lotes multi-linha controlados. Atualize o dashboard a cada 1,5 segundo com
+baseline + delta do run_id, sem piscar ou reduzir valores já exibidos. Resetar
+demo deve excluir apenas eventos daquele run_id, nunca dados brutos. Teste
+inserção, progresso e reset.
+```
+
+**Prompt 3 — predição progressiva**
+
+```text
+Classifique os eventos da simulação com fraud_xgb_b1_v1. Não treine nem
+recarregue o modelo a cada clique; confirme que ele está ativo e use lock para
+evitar cargas simultâneas. A cada janela de 5.000 eventos, execute
+ML_PREDICT_TABLE em sublotes de até 1.000 linhas quando exigido pela versão do
+HeatWave. Persista run_id, transaction_id, probabilidade, faixa e estado. Mostre
+"classificando" enquanto houver fila. Score é risco previsto, não fraude
+confirmada. Teste concorrência e recuperação de erro sem travar o dashboard.
+```
+
+**Prompt 4 — tabela e investigação**
+
+```text
+Adicione uma seção paginada "Transações classificadas no fluxo" com todos os
+eventos do run_id. Mostre contagens consolidadas para score >=27%, >=50% e >=85%
+sem duplicação. Um clique abre modal com data/hora, valor, cliente
+pseudonimizado, estabelecimento, categoria, local, distância e a probabilidade
+extraída de ml_results. Use spinner para score pendente e linguagem de alerta de
+risco. O modal não pode quebrar enquanto a simulação atualiza.
+```
+
+**Prompt 5 — chat inteligente**
+
+```text
+Adicione um único chat com memória só da sessão. Faça roteamento: perguntas de
+dados chamam sys.NL_SQL com execute=false e schema fraud_demo_public; valide o
+SQL aceitando apenas SELECT/WITH das views de uma allowlist, LIMIT <=100, timeout
+e bloqueando DDL, DML, CALL, comentários e múltiplas instruções. Mostre o SQL
+executado. Perguntas sobre dataset, modelo, métricas, threshold ou limitações
+chamam sys.ML_RAG na Vector Store e retornam citações. Crie 20 testes NL to SQL,
+20 testes RAG e bloqueios para prompt injection e DELETE.
+```
+
+**Prompt 6 — deploy e aceite**
+
+```text
+Prepare para demo presencial: segredos no runtime/Vault, TLS, pools separados
+para leitura e simulação, CORS restrito, rate limit, logs sem PII e health check
+sem ML_PREDICT_TABLE. Automatize smoke tests: dashboard, live-run de 60 segundos,
+classificação progressiva, detalhe, reset, NL to SQL, RAG e DELETE bloqueado.
+Documente como iniciar, configurar variáveis e remover somente um run_id.
+```
+
+Configure host, usuários, senha, TLS, modelos e Vector Store exclusivamente como
+segredos do runtime. O capítulo 6 traz um Prompt 0 de planejamento e o contrato
+completo de rotas e deploy.
+
+### 10. Checklist de validação do laboratório
+
+Antes de apresentar, valide cada evidência abaixo: (1) as tabelas de origem e
+views públicas retornam contagens coerentes; (2) a tabela está carregada no
+cluster; (3) o catálogo informa o modelo como pronto e `ML_MODEL_ACTIVE` como
+ativo; (4) `ML_PREDICT_ROW` retorna JSON para uma transação com as cinco
+features; (5) a avaliação de validação contém probabilidades, matriz de
+confusão, precisão, recall, F1, ROC AUC e volume de alertas; (6) o Vector Store
+tem segmentos e `ML_RAG` retorna citações; (7) `NL_SQL` gera somente um SELECT
+validado; e (8) o roteiro da aplicação completa live-run, score, reset e
+bloqueio de escrita fora do escopo. Registre versão do MySQL HeatWave, região,
+modelos usados e datas de cada teste.
 
 ## Leitura complementar
 
