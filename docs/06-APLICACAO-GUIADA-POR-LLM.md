@@ -11,6 +11,10 @@ assistente no seu repositório privado. Execute os prompts abaixo em ordem. Ao
 final de cada um, peça testes automatizados e só siga quando os critérios de
 aceite forem satisfeitos.
 
+Antes do Prompt 0, execute o [contrato de execução para LLM](07-CONTRATO-DE-EXECUCAO-PARA-LLM.html).
+Ele descobre os objetos reais do ambiente e impede que o agente invente nomes,
+permissões ou tabelas.
+
 ## Prompt 0 — contrato e estrutura
 
 ```text

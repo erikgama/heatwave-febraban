@@ -14,6 +14,15 @@ aplicação web construída no seu próprio ambiente.
 > Sparkov é sintético. `is_fraud = 1` é um rótulo histórico do simulador. Um
 > score é alerta de risco para investigação, nunca confirmação de fraude.
 
+## Como entregar este laboratório a um LLM
+
+Para um Codex ou LLM geral, não envie somente “implemente isso”. Envie o link
+do repositório e o [prompt de partida](docs/07-CONTRATO-DE-EXECUCAO-PARA-LLM.md#prompt-de-partida).
+Ele obriga o agente a inspecionar o ambiente, criar um contrato com os nomes
+reais e **parar** em caso de divergência, antes de escrever código. O contrato
+define variáveis, pools, tabelas live, API, limites de segurança e testes de
+aceite; por isso elimina a necessidade de o LLM adivinhar objetos do seu banco.
+
 ## Guia completo: do zero ao laboratório
 
 Siga as etapas abaixo na ordem. Os documentos da pasta `docs/` aprofundam cada
@@ -432,6 +441,7 @@ cada assunto, oferecem uma leitura navegável e fornecem o conteúdo do RAG.
 | 4 | [Analytics e NL to SQL](https://erikgama.github.io/heatwave-febraban/04-ANALYTICS-E-NL-SQL.html) | [04-ANALYTICS-E-NL-SQL.md](docs/04-ANALYTICS-E-NL-SQL.md) | consultas e chat de dados |
 | 5 | [RAG documental](https://erikgama.github.io/heatwave-febraban/05-RAG-DOCUMENTAL.html) | [05-RAG-DOCUMENTAL.md](docs/05-RAG-DOCUMENTAL.md) | documento vetorizado |
 | 6 | [Aplicação guiada por LLM](https://erikgama.github.io/heatwave-febraban/06-APLICACAO-GUIADA-POR-LLM.html) | [06-APLICACAO-GUIADA-POR-LLM.md](docs/06-APLICACAO-GUIADA-POR-LLM.md) | aplicação no seu ambiente |
+| 7 | [Contrato de execução para LLM](https://erikgama.github.io/heatwave-febraban/07-CONTRATO-DE-EXECUCAO-PARA-LLM.html) | [07-CONTRATO-DE-EXECUCAO-PARA-LLM.md](docs/07-CONTRATO-DE-EXECUCAO-PARA-LLM.md) | implementação sem adivinhação |
 
 ## Dados usados
 

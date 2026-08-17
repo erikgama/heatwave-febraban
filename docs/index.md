@@ -18,6 +18,7 @@ sintéticos Sparkov, analytics, Machine Learning, RAG e NL to SQL.
 5. [Analytics no cluster e NL to SQL](04-ANALYTICS-E-NL-SQL.html)
 6. [Vetorizar a documentação e usar ML_RAG](05-RAG-DOCUMENTAL.html)
 7. [Construir a aplicação com apoio de um LLM](06-APLICACAO-GUIADA-POR-LLM.html)
+8. [Contrato de execução para Codex e outros LLMs](07-CONTRATO-DE-EXECUCAO-PARA-LLM.html)
 
 Para RAG, use [Documento do modelo](DOCUMENTO-MODELO-PARA-RAG.html), exporte
 para PDF e carregue-o no Object Storage.
