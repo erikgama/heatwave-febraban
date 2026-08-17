@@ -18,13 +18,13 @@ aplicação web construída no seu próprio ambiente.
 
 | Etapa | Documento | Resultado |
 | --- | --- | --- |
-| 0 | [Visão geral e pré-requisitos](docs/00-VISAO-GERAL.md) | arquitetura e checklist |
-| 1 | [DB System e cluster](docs/01-DBSYSTEM-E-CLUSTER.md) | HeatWave disponível |
-| 2 | [Dados e camada pública](docs/02-DADOS-E-CAMADA-PUBLICA.md) | Sparkov importado |
-| 3 | [Modelo e predições](docs/03-MODELO-E-PREDICOES.md) | XGBoost treinado e avaliado |
-| 4 | [Analytics e NL to SQL](docs/04-ANALYTICS-E-NL-SQL.md) | consultas e chat de dados |
-| 5 | [RAG documental](docs/05-RAG-DOCUMENTAL.md) | documento vetorizado |
-| 6 | [Aplicação guiada por LLM](docs/06-APLICACAO-GUIADA-POR-LLM.md) | aplicação no seu ambiente |
+| 0 | [Visão geral e pré-requisitos](https://erikgama.github.io/heatwave-febraban/00-VISAO-GERAL.html) | arquitetura e checklist |
+| 1 | [DB System e cluster](https://erikgama.github.io/heatwave-febraban/01-DBSYSTEM-E-CLUSTER.html) | HeatWave disponível |
+| 2 | [Dados e camada pública](https://erikgama.github.io/heatwave-febraban/02-DADOS-E-CAMADA-PUBLICA.html) | Sparkov importado |
+| 3 | [Modelo e predições](https://erikgama.github.io/heatwave-febraban/03-MODELO-E-PREDICOES.html) | XGBoost treinado e avaliado |
+| 4 | [Analytics e NL to SQL](https://erikgama.github.io/heatwave-febraban/04-ANALYTICS-E-NL-SQL.html) | consultas e chat de dados |
+| 5 | [RAG documental](https://erikgama.github.io/heatwave-febraban/05-RAG-DOCUMENTAL.html) | documento vetorizado |
+| 6 | [Aplicação guiada por LLM](https://erikgama.github.io/heatwave-febraban/06-APLICACAO-GUIADA-POR-LLM.html) | aplicação no seu ambiente |
 
 ## Dados usados
 
@@ -34,7 +34,7 @@ gerada pelo [Sparkov](https://github.com/namebrandon/Sparkov_Data_Generation).
 
 ## Documento para vetorização
 
-Use [Documento do modelo para RAG](docs/DOCUMENTO-MODELO-PARA-RAG.md) como fonte
+Use [Documento do modelo para RAG](https://erikgama.github.io/heatwave-febraban/DOCUMENTO-MODELO-PARA-RAG.html) como fonte
 canônica. Exporte-o para PDF, envie-o ao Object Storage e siga a etapa 5.
 
 ## O que este repositório deliberadamente não contém

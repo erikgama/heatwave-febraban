@@ -1,3 +1,8 @@
+---
+layout: default
+title: Aplicação guiada por LLM
+---
+
 # 6. Construir e publicar a aplicação com apoio de um LLM
 
 Este repositório não entrega código de aplicação. Use este prompt em Codex,

@@ -1,3 +1,8 @@
+---
+layout: default
+title: Documento do modelo para RAG
+---
+
 # Documento do modelo: laboratório de investigação de risco
 
 ## Finalidade

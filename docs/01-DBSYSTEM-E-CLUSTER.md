@@ -1,3 +1,8 @@
+---
+layout: default
+title: DB System e cluster analítico
+---
+
 # 1. Criar o DB System e o cluster analítico
 
 No Console OCI, abra **MySQL HeatWave > DB Systems > Create DB System**. Escolha

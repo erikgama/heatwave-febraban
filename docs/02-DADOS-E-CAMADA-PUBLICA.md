@@ -1,3 +1,8 @@
+---
+layout: default
+title: Dados e camada pública
+---
+
 # 2. Dados, importação e camada pública
 
 Baixe `fraudTrain.csv` e `fraudTest.csv` no

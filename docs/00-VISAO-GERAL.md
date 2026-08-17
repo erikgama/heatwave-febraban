@@ -1,3 +1,8 @@
+---
+layout: default
+title: Visão geral e pré-requisitos
+---
+
 # 0. Visão geral e pré-requisitos
 
 ## Arquitetura alvo

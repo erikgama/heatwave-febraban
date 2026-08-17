@@ -1,3 +1,8 @@
+---
+layout: default
+title: RAG documental
+---
+
 # 5. Vetorizar documentação e usar ML_RAG
 
 Use [DOCUMENTO-MODELO-PARA-RAG.md](DOCUMENTO-MODELO-PARA-RAG.md) como fonte

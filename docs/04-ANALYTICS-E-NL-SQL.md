@@ -1,3 +1,8 @@
+---
+layout: default
+title: Analytics e NL to SQL
+---
+
 # 4. Cluster analítico e linguagem natural para SQL
 
 Depois de carregar a tabela no cluster, consulte as views públicas:

@@ -1,3 +1,8 @@
+---
+layout: default
+title: Modelo e predições
+---
+
 # 3. Consolidar dados, treinar e usar o modelo
 
 ## Features B1
