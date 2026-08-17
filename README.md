@@ -5,6 +5,8 @@ credenciais, dados privados ou artefatos do ambiente do evento. A proposta é qu
 você use um LLM/Codex como parceiro de implementação e reproduza cada etapa no
 seu próprio MySQL HeatWave.
 
+Revisão documental: agosto de 2026.
+
 O resultado esperado é uma experiência com dados sintéticos, analytics no
 cluster HeatWave, modelo de risco, predições, RAG documental, NL to SQL e uma
 aplicação web construída no seu próprio ambiente.
