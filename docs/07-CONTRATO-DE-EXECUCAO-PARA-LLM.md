@@ -25,8 +25,10 @@ Antes de escrever qualquer código, conecte-se usando apenas variáveis de ambie
 já configuradas e execute o preflight do capítulo 7. Crie IMPLEMENTATION-CONTRACT.md
 no repositório da aplicação com os nomes reais encontrados, versão, permissões,
 model handle, tabela do Vector Store, views permitidas e resultado de cada teste.
-Não use mocks, não adivinhe nomes, não exponha segredos, não altere fraud_demo,
-fraud_ml ou fraud_rag. Se algum pré-requisito falhar, pare e reporte a divergência.
+Não use mocks, não adivinhe nomes, não exponha segredos nem altere tabelas
+históricas, modelo ou Vector Store. O pré-flight pode inspecionar
+`fraud_demo`, `fraud_ml` e `febraban_rag` somente em leitura. Se algum
+pré-requisito falhar, pare e reporte a divergência.
 Depois da aprovação do contrato, implemente os prompts 1 a 6 do README em ordem,
 executando os testes de aceite de cada etapa.
 ```
@@ -43,15 +45,16 @@ SELECT * FROM performance_schema.rpd_nodes;
 
 SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE
 FROM information_schema.tables
-WHERE TABLE_SCHEMA IN ('fraud_demo','fraud_demo_public','fraud_ml','fraud_rag','fraud_demo_live')
+WHERE TABLE_SCHEMA IN ('fraud_demo','fraud_demo_public','fraud_ml','febraban_rag')
 ORDER BY TABLE_SCHEMA, TABLE_NAME;
 
 SHOW FULL TABLES FROM fraud_demo_public;
-SHOW TABLES FROM fraud_rag;
+SHOW TABLES FROM febraban_rag;
 
-SELECT * FROM ML_SCHEMA_admin.MODEL_CATALOG
-WHERE MODEL_HANDLE = 'fraud_xgb_b1_v1';
-SELECT sys.ML_MODEL_ACTIVE('fraud_xgb_b1_v1') AS model_active;
+SELECT model_handle, model_owner, model_type, task, target_column_name,
+       train_table_name, column_names, model_object_size
+FROM ML_SCHEMA_febraban.MODEL_CATALOG
+WHERE model_handle = 'febraban_fraud_manual_xgb_b1_final_v2_20260810';
 ```
 
 O contrato só está aprovado se todos estes itens forem verdadeiros:
@@ -61,9 +64,9 @@ O contrato só está aprovado se todos estes itens forem verdadeiros:
 | HeatWave | há nós disponíveis em `performance_schema.rpd_nodes` |
 | dados | `fraud_demo.transactions_raw` existe e a camada pública existe |
 | acesso do chat | `fraud_demo_public.v_transactions_investigation` existe e não expõe cartão, nome, endereço ou coordenadas |
-| modelo | `fraud_xgb_b1_v1` existe no catálogo; o LLM registra se está ativo ou se o serviço interno pode carregá-lo uma vez |
-| RAG | há uma tabela de Vector Store em `fraud_rag`; registrar o nome exato |
-| isolamento | `fraud_demo_live` existe ou pode ser criada pelo operador; nunca reutilizar tabelas brutas |
+| modelo | B1 V2 existe em `ML_SCHEMA_febraban`; o LLM registra owner e features e só prevê após autorização |
+| RAG | há uma tabela de Vector Store em `febraban_rag`; registrar o nome exato |
+| isolamento | `fraud_demo.live_transaction_events` existe; nunca reutilizar tabelas brutas |
 | segurança | não há segredo, PII ou saída de `SHOW GRANTS` integral no log da aplicação |
 
 Se o modelo, o Vector Store ou uma view tiverem nome diferente, o LLM deve usar
@@ -90,14 +93,14 @@ LIVE_DB_HOST=host-do-mysql
 LIVE_DB_PORT=3306
 LIVE_DB_USER=app_liveworker
 LIVE_DB_PASSWORD=nao_versionar
-LIVE_DB_NAME=fraud_demo_live
+LIVE_DB_NAME=fraud_demo
 LIVE_DB_SSL_CA=/caminho/ca.pem
 
-HEATWAVE_MODEL_HANDLE=fraud_xgb_b1_v1
-HEATWAVE_VECTOR_STORE=fraud_rag.nome_real_encontrado
-HEATWAVE_NL_SQL_MODEL=modelo_geracao_compativel_na_regiao
-HEATWAVE_RAG_MODEL=modelo_geracao_compativel_na_regiao
-RISK_THRESHOLD=0.27
+HEATWAVE_MODEL_HANDLE=febraban_fraud_manual_xgb_b1_final_v2_20260810
+HEATWAVE_VECTOR_STORE=febraban_rag.modelo_b1_v2_cpu_e5_pdf
+HEATWAVE_NL_SQL_MODEL=meta.llama-3.3-70b-instruct
+HEATWAVE_RAG_MODEL=meta.llama-3.3-70b-instruct
+RISK_THRESHOLD=0.60
 ```
 
 O LLM deve validar que todas as variáveis obrigatórias existem no runtime sem
@@ -111,7 +114,7 @@ Há dois pools de conexões no backend, nunca no frontend:
 | Pool | Pode fazer | Não pode fazer |
 | --- | --- | --- |
 | `readPool` (`app_readonly`) | `SELECT` em views públicas; chamar NL_SQL e ML_RAG autorizados | tabela bruta, schema ML, tabelas live, DDL/DML |
-| `livePool` (`app_liveworker`) | ler/escrever apenas `fraud_demo_live`; chamar predição autorizada | ler `fraud_demo` bruto, treinar, alterar views públicas, acessar RAG/ML fora do necessário |
+| `livePool` (`app_liveworker`) | ler/escrever apenas `fraud_demo.live_transaction_events` e estágio ML autorizado; chamar predição aprovada | tabela bruta, treino, alteração de views públicas ou RAG fora do necessário |
 
 O worker pode criar e remover tabelas temporárias de saída de
 `ML_PREDICT_TABLE` **somente** dentro de `fraud_demo_live`. A tabela persistente

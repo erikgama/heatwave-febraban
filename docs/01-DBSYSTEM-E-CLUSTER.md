@@ -31,7 +31,7 @@ Crie os schemas e a identidade visitante:
 CREATE SCHEMA IF NOT EXISTS fraud_demo;
 CREATE SCHEMA IF NOT EXISTS fraud_demo_public;
 CREATE SCHEMA IF NOT EXISTS fraud_ml;
-CREATE SCHEMA IF NOT EXISTS fraud_rag;
+CREATE SCHEMA IF NOT EXISTS febraban_rag;
 
 CREATE USER IF NOT EXISTS 'app_readonly'@'%' IDENTIFIED BY 'USE_UM_SECRET_DO_VAULT';
 GRANT SELECT, SHOW VIEW ON fraud_demo_public.* TO 'app_readonly'@'%';

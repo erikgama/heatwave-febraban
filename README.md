@@ -56,7 +56,7 @@ Crie os schemas do laboratório e o usuário que a futura aplicação utilizará
 CREATE SCHEMA IF NOT EXISTS fraud_demo;
 CREATE SCHEMA IF NOT EXISTS fraud_demo_public;
 CREATE SCHEMA IF NOT EXISTS fraud_ml;
-CREATE SCHEMA IF NOT EXISTS fraud_rag;
+CREATE SCHEMA IF NOT EXISTS febraban_rag;
 CREATE SCHEMA IF NOT EXISTS fraud_demo_live;
 
 CREATE USER IF NOT EXISTS 'app_readonly'@'%' IDENTIFIED BY 'USE_UM_SECRET_DO_VAULT';
@@ -299,7 +299,7 @@ configure Resource Principal para o DB System lê-lo.
 
 ```sql
 SET @options=JSON_OBJECT(
-  'schema_name','fraud_rag',
+  'schema_name','febraban_rag',
   'table_name','modelo_b1_docs',
   'language','pt',
   'embed_model_id','multilingual-e5-small',
@@ -316,9 +316,9 @@ rotina. Ao finalizar, descubra o nome real criado — em cargas de PDF a tabela
 pode receber sufixo de formato — e só então consulte RAG:
 
 ```sql
-SHOW TABLES FROM fraud_rag LIKE 'modelo_b1_docs%';
+SHOW TABLES FROM febraban_rag LIKE 'modelo_b1_docs%';
 SET @rag_options=JSON_OBJECT(
-  'vector_store',JSON_ARRAY('fraud_rag.NOME_REAL_DA_TABELA'),
+  'vector_store',JSON_ARRAY('febraban_rag.NOME_REAL_DA_TABELA'),
   'n_citations',5,
   'model_options',JSON_OBJECT('model_id','meta.llama-3.3-70b-instruct')
 );

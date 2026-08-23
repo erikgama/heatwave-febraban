@@ -80,7 +80,7 @@ execução corrente e retorna a `READY`.
   está em execução, mantendo cartões e progresso pelo snapshot operacional.
 - O modelo já deve estar carregado no preflight com `ML_MODEL_LOAD`.
 - Para cada bloco de 5.000 IDs confirmados: `DELETE` da stage, `INSERT SELECT`
-  das cinco features, `ML_PREDICT_TABLE`, `UPDATE` dos scores no evento e
+  das sete features do B1, `ML_PREDICT_TABLE`, `UPDATE` dos scores no evento e
   atualização de `live_demo_runs`.
 - A interface consulta o progresso, alertas e transações classificadas pela
   camada operacional enquanto o ML trabalha.

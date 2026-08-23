@@ -42,13 +42,15 @@ O NL_SQL recebe somente estas views do schema `fraud_demo_public`:
 - `v_category_summary`
 - `v_merchant_summary`
 - `v_state_summary`
-- `v_customer_summary`
-- `v_hour_summary`
-- `v_label_comparison`
-- `v_daily_summary`
+- `v_live_transaction_events`
 
 Assim, metadados da tabela bruta, tabelas de sistema e qualquer outro schema
 não entram no contexto de geração.
+
+`v_fraud_predictions` existe no schema público, porém contém predições
+históricas do modelo V1 e threshold 0,33. Ela não integra a allowlist atual do
+NL_SQL, para não misturar esse histórico com o B1 V2 e a regra operacional de
+60% usada na simulação.
 
 ## Roteamento unificado: SQL, RAG e memória
 
@@ -114,7 +116,7 @@ OCI. Para desativar a integração nativa sem remover o fallback curado, defina
 Além do catálogo técnico passado pelo HeatWave, a aplicação envia um prompt de
 negócio versionado em `src/server/nl-sql-guidance.ts`. Ele instrui o modelo a:
 
-- usar as oito views públicas e nunca inventar campos ou tabelas;
+- usar somente as cinco views públicas permitidas e nunca inventar campos ou tabelas;
 - distinguir `COUNT(*)` de `SUM(dataset_fraud_label)`;
 - tratar o rótulo 1 como histórico e sintético, sem alegar fraude confirmada;
 - reconhecer que cidade/estado são residência do cliente;

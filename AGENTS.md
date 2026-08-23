@@ -31,9 +31,10 @@ SHOW DATABASES;
 SHOW FULL TABLES FROM fraud_demo_public;
 SHOW FULL TABLES FROM fraud_demo;
 SHOW FULL TABLES FROM fraud_ml;
-SHOW FULL TABLES FROM fraud_rag;
-SELECT MODEL_HANDLE, MODEL_TYPE, MODEL_STATUS
-FROM ML_SCHEMA_admin.MODEL_CATALOG;
+SHOW FULL TABLES FROM febraban_rag;
+SELECT model_handle, model_owner, model_type, task, target_column_name,
+       train_table_name, column_names, model_object_size
+FROM ML_SCHEMA_febraban.MODEL_CATALOG;
 ```
 
 ## O que já está pronto
@@ -45,7 +46,7 @@ FROM ML_SCHEMA_admin.MODEL_CATALOG;
 | Cluster analítico | HeatWave | Acelera agregações e consultas de dashboard em memória. |
 | Modelo B1 | Treinado | Classificador que estima risco do rótulo histórico sintético. |
 | Simulação ao vivo | `fraud_demo.live_transaction_*` | Gera eventos coerentes com a base e armazena scores. |
-| Vector Store + RAG | `fraud_rag` | Documentação sobre base, modelo, métricas, limites e compliance. |
+| Vector Store + RAG | `febraban_rag` | Documentação sobre base, modelo, métricas, limites e compliance. |
 | NL to SQL | `sys.NL_SQL` | Perguntas sobre dados convertidas em SQL auditável. |
 
 ## Fonte de dados
@@ -82,11 +83,8 @@ sensíveis e usam nomes de negócio.
 | `v_category_summary` | categoria | `category`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
 | `v_merchant_summary` | estabelecimento + categoria | `merchant_name`, `category`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. Use volume mínimo em rankings de taxa. |
 | `v_state_summary` | estado | `state`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
-| `v_customer_summary` | cliente mascarado | `customer_id`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
-| `v_hour_summary` | hora | `transaction_hour`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
-| `v_label_comparison` | rótulo | Comparação de volume e valor entre `dataset_fraud_label=0` e `1`. |
-| `v_daily_summary` | dia | Volume, valor e rótulos históricos por data. |
 | `v_live_transaction_events` | evento simulado | `run_id`, `event_id`, contexto da compra, `model_prediction`, `fraud_probability` e `risk_band`. Para fluxo atual, filtre sempre pelo `run_id` ativo. |
+| `v_fraud_predictions` | predição histórica | Scores de **outro modelo**, `febraban_fraud_final_f1_v1_20260809`, com threshold gravado `0,33`. Não é a fonte do B1 V2 nem da simulação atual. |
 
 ### Colunas da origem `fraud_demo.transactions_raw`
 
@@ -114,7 +112,8 @@ recurso técnico; para perguntas comuns, use as views públicas.
 | `features_manual_*_v2` | Camada versionada de features e splits temporais do experimento B1. |
 | `validation_predictions_b1_v2` e scores | Validação usada para entender o threshold. |
 | `test_predictions_b1_v2` e `test_scores_b1_v2` | Avaliação final no teste isolado. |
-| `ML_SCHEMA_admin.MODEL_CATALOG` | Catálogo que confirma handle, tipo e status do modelo. |
+| `ML_SCHEMA_admin.MODEL_CATALOG` | Catálogo de origem do B1 original, pertencente a `admin`. |
+| `ML_SCHEMA_febraban.MODEL_CATALOG` | Catálogo da cópia B1 usada pela aplicação e simulação. |
 
 Objetos com `B2` são experimento/evolução futura. O modelo ativo da demo é B1.
 
@@ -123,6 +122,8 @@ Objetos com `B2` são experimento/evolução futura. O modelo ativo da demo é B
 | Propriedade | Valor |
 | --- | --- |
 | Handle | `febraban_fraud_manual_xgb_b1_final_v2_20260810` |
+| Proprietário da cópia usada pelo app | `febraban` (`ML_SCHEMA_febraban.MODEL_CATALOG`) |
+| Proprietário do original | `admin` (`ML_SCHEMA_admin.MODEL_CATALOG`) |
 | Tipo | classificação binária |
 | Algoritmo | `XGBClassifier` (XGBoost), treinado com `sys.ML_TRAIN` no HeatWave |
 | Target | `is_fraud`, rótulo histórico sintético |
@@ -131,36 +132,39 @@ Objetos com `B2` são experimento/evolução futura. O modelo ativo da demo é B
 
 ### Features efetivamente usadas por B1
 
-O B1 usa **cinco** features:
+O B1 usa **sete** features, confirmadas no catálogo do modelo:
 
 1. `amount` — valor da compra.
 2. `amount_log` — `LN(1 + amount)`, para reduzir assimetria de valores altos.
 3. `category` — categoria da compra.
 4. `transaction_hour` — hora de 0 a 23.
-5. `customer_merchant_distance_km` — distância calculada entre cliente e
+5. `weekday_number` — dia da semana no padrão MySQL, segunda-feira = 0.
+6. `is_weekend` — indicador derivado de `weekday_number` (sábado/domingo).
+7. `customer_merchant_distance_km` — distância calculada entre cliente e
    estabelecimento sintéticos.
 
 `is_fraud` não é enviado em uma nova predição: ele é o target. IDs e timestamp
-são auditoria, não features. `weekday_number` e `is_weekend` existem na base,
-mas não foram selecionados para o B1 final.
+são auditoria, não features.
 
 ### Interpretação do score
 
 - Score é probabilidade estimada da classe histórica positiva; não confirma
   fraude.
-- Threshold operacional atual da demo: **60%** (`fraud_probability >= 0.60`).
+- Threshold operacional da simulação: **60%** (`fraud_probability >= 0.60`).
 - 85% e 95% são faixas de priorização visual de alertas altos e críticos.
-- Há referência histórica de threshold `0,27` na validação; ela não é a regra
-  operacional atual da demo.
+- Há referência de `0,27` no experimento de validação B1 e de `0,33` na view
+  histórica `v_fraud_predictions` (modelo V1). Nenhum dos dois substitui a
+  regra operacional atual da simulação.
 - Para qualidade, use precisão, recall, F1, ROC AUC, matriz de confusão e
   volume de alertas. Acurácia isolada engana em classes raras.
 
 ## Cluster analítico HeatWave
 
 As tabelas de origem e fluxo têm carga no secondary engine. Em conexão dedicada
-de analytics, force o cluster:
+de analytics, habilite autocommit e force o cluster:
 
 ```sql
+SET SESSION autocommit = 1;
 SET SESSION use_secondary_engine = FORCED;
 SELECT category, COUNT(*) AS transaction_count, SUM(amount) AS total_amount
 FROM fraud_demo_public.v_transactions_investigation
@@ -175,7 +179,7 @@ tabela carregada, valide `LOAD_STATUS` e `LOAD_PROGRESS` com o administrador.
 
 ## Documentação vetorizada e ML_RAG
 
-O schema `fraud_rag` contém a documentação vetorizada. A fonte canônica é
+O schema `febraban_rag` contém a documentação vetorizada. A fonte canônica é
 `docs/DOCUMENTO-MODELO-PARA-RAG.md`: dataset, modelo B1, features, split,
 métricas, threshold, limites, governança e compliance.
 
@@ -186,10 +190,16 @@ Configuração publicada e validada para a demo:
 | Embedding dos trechos e da pergunta | `multilingual-e5-small`, embarcado no HeatWave (CPU) |
 | Geração da resposta RAG | `meta.llama-3.3-70b-instruct`, OCI Generative AI (GPU) |
 | Rotina | `sys.ML_RAG` |
-| Vector Store de referência | `febraban_rag.modelo_b1_v2_cpu_e5_pdf` |
+| Vector Store técnico de referência | `febraban_rag.modelo_b1_v2_cpu_e5_pdf` |
 
-Não use `cohere.embed-v4.0` nem stores de experimento como configuração padrão:
-eles foram mantidos apenas para comparação e não são a versão publicada.
+Também existe `febraban_rag.guia_laboratorio_febraban_cpu_e5_v2`. Não use
+`cohere.embed-v4.0` nem stores de experimento como configuração padrão.
+
+> Atenção: a versão já vetorizada do guia pode citar a definição antiga de cinco
+> features e o threshold experimental `0,27`. Para fatos do B1 ativo, consulte
+> primeiro `ML_SCHEMA_febraban.MODEL_CATALOG`. Antes de usar RAG para explicar
+> o B1 V2 em uma nova demo, gere uma nova versão do documento e um novo Vector
+> Store, depois valide recuperação de features e thresholds.
 
 Use **ML_RAG** para perguntas documentais, como:
 
@@ -200,12 +210,14 @@ Use **ML_RAG** para perguntas documentais, como:
 
 Use SQL/NL_SQL para fatos variáveis: rankings, quantidades atuais, uma
 transação ou resultados da rodada. Descubra o nome exato do Vector Store com
-`SHOW TABLES FROM fraud_rag` em uma instalação nova antes de chamar `ML_RAG`.
+`SHOW TABLES FROM febraban_rag` em uma instalação nova antes de chamar `ML_RAG`.
 
 ## NL to SQL para exploração de dados
 
 Para perguntas de dados, use `sys.NL_SQL` limitado ao schema
-`fraud_demo_public` e `execute=false`. Valide o SQL antes de executar: somente
+`fraud_demo_public` e `execute=false`. A allowlist atual contém
+`v_transactions_investigation`, `v_category_summary`, `v_merchant_summary`,
+`v_state_summary` e `v_live_transaction_events`. Valide o SQL antes de executar: somente
 uma instrução `SELECT` ou `WITH ... SELECT` nas views permitidas.
 
 O modelo de geração aprovado para NL_SQL também é
@@ -244,6 +256,19 @@ Exemplos:
 
 Não substitua modelo, Vector Store, views públicas ou simulação sem pedido
 explícito e plano de rollback.
+
+## Compartilhamento obrigatório do modelo para `febraban`
+
+O B1 original foi treinado por `admin`. Conceder uma role administrativa não
+faz a rotina ML procurar automaticamente o catálogo de outro usuário. Para a
+simulação, foi importada uma cópia com o mesmo handle em
+`ML_SCHEMA_febraban.MODEL_CATALOG` nos três clones.
+
+Quando houver um novo modelo do administrador, repita em **cada clone** o fluxo
+oficial: `admin` executa `ML_MODEL_EXPORT`; `febraban` executa
+`ML_MODEL_IMPORT` para o próprio catálogo; por fim, `febraban` valida
+`ML_MODEL_LOAD`, `ML_PREDICT_ROW` e `ML_PREDICT_TABLE`. Nunca aponte a aplicação
+para um handle que exista apenas em `ML_SCHEMA_admin`.
 
 ## Segurança obrigatória
 

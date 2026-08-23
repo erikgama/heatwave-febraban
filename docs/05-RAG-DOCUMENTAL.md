@@ -18,8 +18,8 @@ o bucket. Não torne o bucket público por conveniência.
 ## Criar Vector Store
 
 ```sql
-CREATE SCHEMA IF NOT EXISTS fraud_rag;
-SET @options=JSON_OBJECT('schema_name','fraud_rag','table_name','modelo_b1_docs',
+CREATE SCHEMA IF NOT EXISTS febraban_rag;
+SET @options=JSON_OBJECT('schema_name','febraban_rag','table_name','modelo_b1_docs',
  'language','pt','embed_model_id','multilingual-e5-small',
  'formats',JSON_ARRAY('pdf'),
  'chunking',JSON_OBJECT('split_by','recursive'));
@@ -31,7 +31,7 @@ CALL sys.VECTOR_STORE_LOAD(
 retornada pela sua execução e, ao concluir, valide:
 
 ```sql
-SHOW TABLES FROM fraud_rag LIKE 'modelo_b1_docs%';
+SHOW TABLES FROM febraban_rag LIKE 'modelo_b1_docs%';
 ```
 
 Em algumas versões, o carregador acrescenta um sufixo referente ao formato do
@@ -45,7 +45,7 @@ sua região antes de escolher opções OCI/GPU.
 
 ```sql
 SET @rag_options=JSON_OBJECT(
- 'vector_store',JSON_ARRAY('fraud_rag.NOME_REAL_DA_TABELA'),
+ 'vector_store',JSON_ARRAY('febraban_rag.NOME_REAL_DA_TABELA'),
  'n_citations',5,
  'model_options',JSON_OBJECT('model_id','meta.llama-3.3-70b-instruct')
 );
