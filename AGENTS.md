@@ -18,6 +18,13 @@ O resultado pode ser uma análise, um dashboard, uma API, uma aplicação web, u
 
 Não presuma nomes de handles, Vector Stores ou tabelas além dos que forem confirmados no ambiente. Descubra-os no primeiro diagnóstico ou use as variáveis de ambiente configuradas pelo laboratório.
 
+## Conexão local do notebook
+
+- A conexão temporária deste notebook fica no arquivo local `LAB-ACCESS.md`, na raiz. Ele é ignorado pelo Git e **não deve ser exibido, copiado para respostas, código ou logs**.
+- O arquivo informa `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` e `MYSQL_SSL`. Para recursos já provisionados, também pode informar `HEATWAVE_MODEL_HANDLE` e `HEATWAVE_RAG_VECTOR_STORE`.
+- Se `LAB-ACCESS.md` estiver ausente ou incompleto, diga somente quais *nomes de campos* faltam. Nunca peça nem repita o valor de uma senha no chat.
+- Leia os valores apenas para executar a conexão. Nunca crie um arquivo de credenciais versionado nem altere `.gitignore`.
+
 ## Primeiro contato: faça este diagnóstico
 
 Antes de criar qualquer coisa, execute somente verificações curtas e reporte o resultado de forma simples:
@@ -55,7 +62,7 @@ Se algum recurso não estiver pronto, explique qual é o bloqueio e ofereça uma
 
 ## Segurança e governança
 
-- Nunca imprima, registre no Git, cole em código ou peça que o visitante cole senhas, tokens, chaves privadas ou conteúdo de `.env`.
+- Nunca imprima, registre no Git, cole em código ou peça que o visitante cole senhas, tokens, chaves privadas ou conteúdo de `LAB-ACCESS.md`.
 - Banco é **somente leitura por padrão**. Aceite `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` e chamadas de ML/RAG necessárias ao laboratório.
 - Para criar tabelas, views, apps ou objetos novos, trabalhe no schema de sandbox destinado ao notebook. Antes de DDL/DML, informe alvo e efeito.
 - Nunca execute `DROP`, `TRUNCATE`, `DELETE` amplo, `UPDATE` amplo ou `GRANT` sem pedido explícito do visitante e confirmação do alvo exato.
@@ -67,7 +74,7 @@ Quando o visitante pedir para criar uma aplicação, dashboard, consulta, automa
 
 1. Reescreva o objetivo em uma frase e liste os dados/recursos que serão usados.
 2. Inspecione o schema e faça uma consulta mínima real antes de codificar.
-3. Crie a solução no diretório de trabalho do visitante; mantenha credenciais em variáveis de ambiente, nunca no frontend ou no Git.
+3. Crie a solução no diretório de trabalho do visitante; mantenha a conexão em `LAB-ACCESS.md`, nunca no frontend ou no Git.
 4. Para aplicações web, use backend para toda conexão MySQL; o browser jamais acessa o banco diretamente.
 5. Exiba SQL, fonte de dados, filtros, período, limitações e o significado do score quando isso for útil ao usuário final.
 6. Teste o fluxo real: conexão, consulta, tratamento de erro, visualização e, se existir, predição/RAG/NL_SQL.

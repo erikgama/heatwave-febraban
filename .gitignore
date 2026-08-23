@@ -1,0 +1,9 @@
+node_modules/
+dist/
+tmp/
+.env
+.env.local
+LAB-ACCESS.md
+.DS_Store
+coverage/
+*.log
