@@ -248,6 +248,18 @@ e Vector Store disponível. Depois use apenas os recursos já provisionados para
 o que eu solicitar, mostrando SQL seguro quando consultar dados.
 ```
 
+### Prompt de validação antes de iniciar o laboratório
+
+Use este prompt no primeiro contato com cada novo notebook ou DB System:
+
+```text
+Leia o AGENTS.md. Não altere nada. Execute o diagnóstico inicial somente
+leitura e me informe o que está disponível, incluindo schemas, views públicas,
+tabelas de simulação, modelo ativo, status do cluster analítico e Vector Store.
+Liste qualquer recurso ausente, erro de permissão ou inconsistência antes de
+começarmos o laboratório.
+```
+
 ## Referências do repositório
 
 - [Visão geral](README.md)
