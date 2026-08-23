@@ -179,6 +179,18 @@ O schema `fraud_rag` contém a documentação vetorizada. A fonte canônica é
 `docs/DOCUMENTO-MODELO-PARA-RAG.md`: dataset, modelo B1, features, split,
 métricas, threshold, limites, governança e compliance.
 
+Configuração publicada e validada para a demo:
+
+| Etapa | Tecnologia/modelo |
+| --- | --- |
+| Embedding dos trechos e da pergunta | `multilingual-e5-small`, embarcado no HeatWave (CPU) |
+| Geração da resposta RAG | `meta.llama-3.3-70b-instruct`, OCI Generative AI (GPU) |
+| Rotina | `sys.ML_RAG` |
+| Vector Store de referência | `febraban_rag.modelo_b1_v2_cpu_e5_pdf` |
+
+Não use `cohere.embed-v4.0` nem stores de experimento como configuração padrão:
+eles foram mantidos apenas para comparação e não são a versão publicada.
+
 Use **ML_RAG** para perguntas documentais, como:
 
 - “Quais features o B1 usa e por quê?”
@@ -195,6 +207,13 @@ transação ou resultados da rodada. Descubra o nome exato do Vector Store com
 Para perguntas de dados, use `sys.NL_SQL` limitado ao schema
 `fraud_demo_public` e `execute=false`. Valide o SQL antes de executar: somente
 uma instrução `SELECT` ou `WITH ... SELECT` nas views permitidas.
+
+O modelo de geração aprovado para NL_SQL também é
+`meta.llama-3.3-70b-instruct`, via OCI Generative AI (GPU). O NL_SQL usa esse
+modelo para gerar o SQL; depois da validação, a aplicação cria o resumo da
+evidência de forma determinística. Não faça uma segunda chamada a
+`ML_GENERATE` apenas para reescrever o resultado, pois ela não faz parte do
+fluxo publicado e pode competir por recursos durante a demo.
 
 Regras de interpretação:
 
