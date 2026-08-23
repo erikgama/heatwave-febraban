@@ -16,8 +16,10 @@ aplicação web construída no seu próprio ambiente.
 
 ## Como entregar este laboratório a um LLM
 
-Para um Codex ou LLM geral, não envie somente “implemente isso”. Envie o link
-do repositório e o [prompt de partida](docs/07-CONTRATO-DE-EXECUCAO-PARA-LLM.md#prompt-de-partida).
+Para um Codex ou LLM geral, não envie somente “implemente isso”. Abra a raiz
+do repositório no Codex: o arquivo [AGENTS.md](AGENTS.md) fornece o contexto,
+os guardrails e o diagnóstico inicial automaticamente. Em seguida, use o
+[prompt de partida](docs/07-CONTRATO-DE-EXECUCAO-PARA-LLM.md#prompt-de-partida).
 Ele obriga o agente a inspecionar o ambiente, criar um contrato com os nomes
 reais e **parar** em caso de divergência, antes de escrever código. O contrato
 define variáveis, pools, tabelas live, API, limites de segurança e testes de
@@ -161,15 +163,18 @@ somente `SELECT, SHOW VIEW` nesse schema público.
 ### 5. Consolidar features e separar treino/teste
 
 O modelo B1 usa somente dados disponíveis no momento da compra:
-`amount`, `amount_log`, `category`, `transaction_hour` e
-`customer_merchant_distance_km`.
+`amount`, `amount_log`, `category`, `transaction_hour`, `weekday_number`,
+`is_weekend` e `customer_merchant_distance_km`.
 
 ```sql
 CREATE TABLE fraud_ml.features_b1 AS
 SELECT transaction_id, source_split, trans_date_trans_time AS transaction_timestamp,
        CAST(amt AS DECIMAL(14,2)) AS amount,
        LN(1+CAST(amt AS DECIMAL(14,2))) AS amount_log,
-       category, HOUR(trans_date_trans_time) AS transaction_hour,
+       category,
+       HOUR(trans_date_trans_time) AS transaction_hour,
+       WEEKDAY(trans_date_trans_time) AS weekday_number,
+       CASE WHEN WEEKDAY(trans_date_trans_time) IN (5,6) THEN 1 ELSE 0 END AS is_weekend,
        6371*2*ASIN(SQRT(POWER(SIN(RADIANS(merch_lat-customer_lat)/2),2)
          +COS(RADIANS(customer_lat))*COS(RADIANS(merch_lat))
          *POWER(SIN(RADIANS(merch_long-customer_long)/2),2)))
@@ -231,8 +236,9 @@ LIMIT 10;
 ```
 
 Compare thresholds com precisão, recall, F1, ROC AUC, alertas e matriz de
-confusão. O threshold de referência da demo é `0.27`, mas não deve ser copiado
-sem validação local. Acurácia isolada não é adequada para uma classe positiva
+confusão. A validação histórica deste laboratório registrou o threshold `0.27`;
+a interface da demonstração ao vivo usa o corte operacional de `0.60`. Nenhum
+dos dois deve ser copiado sem validação local. Acurácia isolada não é adequada para uma classe positiva
 perto de 0,5%. Depois de congelar o threshold, treine o modelo final com todo
 `train_final` e avalie-o **uma única vez** em `test_final`:
 
@@ -266,6 +272,8 @@ SELECT sys.ML_PREDICT_ROW(
     'amount_log',LN(1201.00),
     'category','shopping_net',
     'transaction_hour',2,
+    'weekday_number',2,
+    'is_weekend',0,
     'customer_merchant_distance_km',15.8
   ),
   @model,NULL
@@ -275,6 +283,13 @@ SELECT sys.ML_PREDICT_ROW(
 Para uma simulação ao vivo, use `ML_PREDICT_TABLE` em lotes e persista score,
 faixa de risco, timestamp e `run_id` em uma tabela isolada. Score acima do
 threshold é alerta previsto — não fraude confirmada.
+
+Se a conta que treinou o modelo for diferente da conta de serviço da aplicação,
+não faça a aplicação consultar diretamente o catálogo do administrador. Use o
+fluxo oficial `ML_MODEL_EXPORT` (proprietário) + `ML_MODEL_IMPORT` (usuário da
+aplicação), carregue a cópia importada e guarde somente o novo handle como
+segredo de runtime. Isso evita falhas de acesso interno ao `MODEL_CATALOG`
+durante `ML_PREDICT_TABLE`.
 
 ### 7. Vetorizar o documento do modelo e testar RAG
 
@@ -368,7 +383,8 @@ inserção, progresso e reset.
 **Prompt 3 — predição progressiva**
 
 ```text
-Classifique os eventos da simulação com fraud_xgb_b1_v1. Não treine nem
+Classifique os eventos da simulação com o handle do modelo final configurado no
+ambiente. Não treine nem
 recarregue o modelo a cada clique; confirme que ele está ativo e use lock para
 evitar cargas simultâneas. A cada janela de 5.000 eventos, execute
 ML_PREDICT_TABLE em sublotes de até 1.000 linhas quando exigido pela versão do
@@ -381,7 +397,7 @@ confirmada. Teste concorrência e recuperação de erro sem travar o dashboard.
 
 ```text
 Adicione uma seção paginada "Transações classificadas no fluxo" com todos os
-eventos do run_id. Mostre contagens consolidadas para score >=27%, >=50% e >=85%
+eventos do run_id. Mostre contagens consolidadas para score >=60%, >=85% e >=95%
 sem duplicação. Um clique abre modal com data/hora, valor, cliente
 pseudonimizado, estabelecimento, categoria, local, distância e a probabilidade
 extraída de ml_results. Use spinner para score pendente e linguagem de alerta de
@@ -419,12 +435,13 @@ completo de rotas e deploy.
 Antes de apresentar, valide cada evidência abaixo: (1) as tabelas de origem e
 views públicas retornam contagens coerentes; (2) a tabela está carregada no
 cluster; (3) o catálogo informa o modelo como pronto e `ML_MODEL_ACTIVE` como
-ativo; (4) `ML_PREDICT_ROW` retorna JSON para uma transação com as cinco
-features; (5) a avaliação de validação contém probabilidades, matriz de
-confusão, precisão, recall, F1, ROC AUC e volume de alertas; (6) o Vector Store
-tem segmentos e `ML_RAG` retorna citações; (7) `NL_SQL` gera somente um SELECT
-validado; e (8) o roteiro da aplicação completa live-run, score, reset e
-bloqueio de escrita fora do escopo. Registre versão do MySQL HeatWave, região,
+ativo; (4) `ML_PREDICT_ROW` retorna JSON para uma transação que contém
+exatamente as sete features do modelo; (5) a avaliação de validação contém
+probabilidades, matriz de confusão, precisão, recall, F1, ROC AUC e volume de
+alertas; (6) o Vector
+Store tem segmentos e `ML_RAG` retorna citações; (8) `NL_SQL` gera somente um
+SELECT validado; e (9) o roteiro da aplicação completa live-run, score, reset
+e bloqueio de escrita fora do escopo. Registre versão do MySQL HeatWave, região,
 modelos usados e datas de cada teste.
 
 ## Leitura complementar
