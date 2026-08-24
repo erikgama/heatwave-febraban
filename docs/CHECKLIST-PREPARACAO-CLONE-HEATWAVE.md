@@ -177,8 +177,8 @@ estratégia operacional da demo classifica janelas de 5.000 eventos com
 `ML_PREDICT_TABLE` e persiste os resultados por `run_id`.
 
 O PDF e Vector Store ativos já estão alinhados ao contrato de sete features:
-`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf` e
-`febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823`. Não reutilize os stores
+`GUIA-FRAUDE-HEATWAVE.pdf` e
+`febraban_rag.fraud_risk_knowledge_base`. Não reutilize os stores
 históricos com cinco features.
 
 Se `ML_PREDICT_TABLE` ou `ML_MODEL_LOAD` retornar erro de catálogo, faça o
@@ -227,14 +227,14 @@ novo, sem sobrescrever stores anteriores:
 
 ```sql
 CALL sys.VECTOR_STORE_LOAD(
-  'oci://<BUCKET>@<NAMESPACE>/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf',
+  'oci://<BUCKET>@<NAMESPACE>/febraban/GUIA-FRAUDE-HEATWAVE.pdf',
   JSON_OBJECT(
     'schema_name', 'febraban_rag',
-    'table_name', 'modelo_b1_v2_oci_embed_v4_rev3_<IDENTIFICADOR_DO_CLONE>',
-    'task_name', 'febraban_rag_gpu_rev3_<IDENTIFICADOR_DO_CLONE>',
+    'table_name', 'fraud_risk_knowledge_base',
+    'task_name', 'fraud_risk_knowledge_<IDENTIFICADOR_DO_CLONE>',
     'language', 'pt',
     'embed_model_id', 'cohere.embed-v4.0',
-    'description', 'Guia B1 V2 revisado: sete features e threshold operacional 0.60; embedding OCI GPU.'
+    'description', 'Modelo de risco: sete features e threshold operacional 0.60; embedding OCI GPU.'
   )
 );
 ```
@@ -246,7 +246,7 @@ status devolvido pela própria chamada `VECTOR_STORE_LOAD`.
 
 ```sql
 CALL sys.ML_RAG(
-  'Qual é o threshold operacional do modelo B1 V2 e por que ele não confirma fraude?',
+  'Qual é o threshold operacional do modelo de risco e por que ele não confirma fraude?',
   @rag_output,
   JSON_OBJECT(
     'vector_store', JSON_ARRAY('febraban_rag.<NOME_REAL_DO_STORE>'),
@@ -395,7 +395,7 @@ npm run build
    - `Qual categoria tem mais fraudes?` — deve indicar origem **NL_SQL** e
      exibir o SQL auditável.
    - `Quais estabelecimentos têm maior taxa de fraude?` — deve usar NL_SQL.
-   - `Qual é o threshold operacional do modelo B1 V2?` — deve indicar
+   - `Qual é o threshold operacional do modelo de risco?` — deve indicar
      **ML_RAG** e trazer citações.
    - `Qual categoria você mencionou na resposta anterior?` — deve usar memória
      da sessão, sem executar SQL.

@@ -56,7 +56,7 @@ SHOW TABLES FROM febraban_rag;
 SELECT model_handle, model_owner, model_type, task, target_column_name,
        train_table_name, column_names, model_object_size
 FROM ML_SCHEMA_febraban.MODEL_CATALOG
-WHERE model_handle = 'febraban_fraud_manual_xgb_b1_final_v2_20260810';
+WHERE model_handle = 'fraud_risk_model';
 ```
 
 O contrato só está aprovado se todos estes itens forem verdadeiros:
@@ -66,7 +66,7 @@ O contrato só está aprovado se todos estes itens forem verdadeiros:
 | HeatWave | há nós disponíveis em `performance_schema.rpd_nodes` |
 | dados | `fraud_demo.transactions_raw` existe e a camada pública existe |
 | acesso do chat | `fraud_demo_public.v_transactions_investigation` existe e não expõe cartão, nome, endereço ou coordenadas |
-| modelo | B1 V2 existe em `ML_SCHEMA_febraban`; o LLM registra owner e features e só prevê após autorização |
+| modelo | `fraud_risk_model` existe em `ML_SCHEMA_febraban`; o LLM registra owner e features e só prevê após autorização |
 | RAG | há uma tabela de Vector Store em `febraban_rag`; registrar o nome exato |
 | isolamento | `fraud_demo.live_transaction_events` existe; nunca reutilizar tabelas brutas |
 | segurança | não há segredo, PII ou saída de `SHOW GRANTS` integral no log da aplicação |
@@ -87,8 +87,8 @@ O modelo ativo e o threshold devem ser configuráveis, mas seus valores de
 referência são:
 
 ```text
-HEATWAVE_MODEL_HANDLE=febraban_fraud_manual_xgb_b1_final_v2_20260810
-HEATWAVE_VECTOR_STORE=febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823
+HEATWAVE_MODEL_HANDLE=fraud_risk_model
+HEATWAVE_VECTOR_STORE=febraban_rag.fraud_risk_knowledge_base
 HEATWAVE_RAG_EMBED_MODEL=cohere.embed-v4.0
 HEATWAVE_NL_SQL_MODEL=meta.llama-3.3-70b-instruct
 HEATWAVE_RAG_MODEL=meta.llama-3.3-70b-instruct
@@ -106,7 +106,7 @@ Há dois pools de conexões no backend, nunca no frontend:
 | Pool | Pode fazer | Não pode fazer |
 | --- | --- | --- |
 | `readPool` (`febraban`) | `SELECT` em views públicas; chamar NL_SQL e ML_RAG autorizados | tabela bruta em UI/chat, DDL/DML gerado pelo usuário |
-| `livePool` (`febraban`) | ler/escrever apenas `fraud_demo.live_transaction_events` e estágio ML autorizado; chamar a predição B1 aprovada | tabela bruta, treino, alteração de views públicas ou RAG fora do necessário |
+| `livePool` (`febraban`) | ler/escrever apenas `fraud_demo.live_transaction_events` e estágio ML autorizado; chamar a predição do modelo de risco | tabela bruta, treino, alteração de views públicas ou RAG fora do necessário |
 
 O worker atual usa `fraud_demo.live_transaction_events`, isolando cada rodada
 com `run_id`, e pode reutilizar as tabelas técnicas de estágio/resultado em
@@ -145,7 +145,7 @@ aceita SQL fornecido pelo navegador.
    em múltiplas instruções produzido por NL_SQL. O backend valida antes de
    executar e aceita apenas `SELECT`/`WITH` sobre a allowlist pública.
 2. Não carregar, treinar ou descarregar o modelo em cada requisição. Um único
-   worker coordena a carga; a cópia do B1 deve ser lida de
+   worker coordena a carga; a cópia do modelo deve ser lida de
    `ML_SCHEMA_febraban.MODEL_CATALOG`. Dashboard e chat continuam disponíveis
    se scoring falhar.
 3. Não declarar fraude confirmada. O rótulo é histórico sintético e o score é

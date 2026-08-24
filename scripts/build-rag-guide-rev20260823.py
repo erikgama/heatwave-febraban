@@ -9,7 +9,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "docs" / "GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf"
+OUTPUT = ROOT / "docs" / "GUIA-FRAUDE-HEATWAVE.pdf"
 NAVY = colors.HexColor("#0B3B4D")
 TEAL = colors.HexColor("#00758F")
 ORANGE = colors.HexColor("#F29111")
@@ -65,7 +65,7 @@ def build():
         str(OUTPUT), pagesize=A4,
         leftMargin=1.55 * cm, rightMargin=1.55 * cm,
         topMargin=1.55 * cm, bottomMargin=1.35 * cm,
-        title="Guia revisado do modelo B1 V2 para RAG",
+        title="Guia do modelo de risco para RAG",
         author="FEBRABAN HeatWave Fraud Copilot",
     )
     base = getSampleStyleSheet()
@@ -83,15 +83,15 @@ def build():
     story = [Spacer(1, 0.5 * cm)]
     story += [
         paragraph("Guia do modelo e dos dados", styles["Title"]),
-        paragraph("B1 V2 - fonte vigente para ML_RAG no MySQL HeatWave | Revisão 23/08/2026", styles["Subtitle"]),
-        paragraph("Esta é a fonte normativa da demonstração. Ela apresenta as sete features B1 V2 e o threshold operacional único de 60%.", styles["Warning"]),
+        paragraph("Fonte vigente para ML_RAG no MySQL HeatWave | Atualizada em 24/08/2026", styles["Subtitle"]),
+        paragraph("Esta é a fonte normativa da demonstração. Ela apresenta as sete features do modelo de risco e o threshold operacional único de 60%.", styles["Warning"]),
         paragraph("Finalidade", styles["H"]),
         paragraph("O laboratório usa o dataset público Credit Card Transactions Fraud Detection, gerado pelo Sparkov e distribuído no Kaggle. São 1.852.394 transações sintéticas de 2019 e 2020; 9.651 têm is_fraud=1 (0,521%). O rótulo é histórico e sintético: nem o rótulo nem o score confirmam fraude de uma pessoa ou empresa.", styles["Body"]),
-        paragraph("O HeatWave armazena dados, acelera analytics no cluster, executa o classificador B1 e recupera esta documentação via Vector Store e ML_RAG. Fatos atuais - totais, rankings, casos e resultados de uma rodada - devem ser consultados em SQL nas views públicas; RAG explica método, métricas, limites e governança.", styles["Body"]),
-        paragraph("Contrato do modelo B1 V2", styles["H"]),
+        paragraph("O HeatWave armazena dados, acelera analytics no cluster, executa o classificador de risco e recupera esta documentação via Vector Store e ML_RAG. Fatos atuais - totais, rankings, casos e resultados de uma rodada - devem ser consultados em SQL nas views públicas; RAG explica método, métricas, limites e governança.", styles["Body"]),
+        paragraph("Contrato do modelo de risco", styles["H"]),
         table([
             ["Propriedade", "Valor aprovado"],
-            ["Handle", "febraban_fraud_manual_xgb_b1_final_v2_20260810"],
+            ["Handle", "fraud_risk_model"],
             ["Catálogo da aplicação", "ML_SCHEMA_febraban.MODEL_CATALOG (proprietário: febraban)"],
             ["Algoritmo", "XGBClassifier para classificação binária"],
             ["Target histórico", "is_fraud; nunca deve ser enviado para uma nova predição"],
@@ -108,14 +108,14 @@ def build():
             ["is_weekend", "Indicador de sábado ou domingo, derivado do dia."],
             ["customer_merchant_distance_km", "Distância entre cliente e estabelecimento sintéticos."],
         ], [6.2 * cm, 10.4 * cm], styles),
-        paragraph("LISTA NORMATIVA COMPLETA DAS SETE FEATURES B1 V2: amount; amount_log; category; transaction_hour; weekday_number; is_weekend; customer_merchant_distance_km. Não há quinta, sexta ou sétima feature implícita: as sete devem estar presentes em toda nova predição.", styles["Callout"]),
+        paragraph("LISTA NORMATIVA COMPLETA DAS SETE FEATURES: amount; amount_log; category; transaction_hour; weekday_number; is_weekend; customer_merchant_distance_km. Não há feature implícita: as sete devem estar presentes em toda nova predição.", styles["Callout"]),
         paragraph("amount_log deve ser calculado como LN(1 + amount). IDs e timestamp são auditoria, não features. Não envie is_fraud, pois ele é exatamente o alvo que o modelo estima.", styles["Callout"]),
         paragraph("Threshold e interpretação correta", styles["H"]),
         table([
             ["Contexto", "Threshold / interpretação"],
             ["Simulação ao vivo", "0,60: alerta de risco previsto quando fraud_probability >= 0,60."],
             ["Priorização visual", "0,85: alerta alto. 0,95: caso crítico. Não confirmam fraude."],
-            ["Predições históricas B1 V2", "0,60: a view pública usa os scores do split de teste do B1 V2."],
+            ["Predições históricas", "0,60: a view pública usa os scores do split de teste do modelo de risco."],
         ], [5.0 * cm, 11.6 * cm], styles),
         paragraph("Comunicação obrigatória: diga 'alerta de risco previsto acima do threshold operacional de 60%'. Nunca diga 'fraude confirmada', nem associe score a culpa, intenção ou bloqueio automático.", styles["Callout"]),
         paragraph("Operação da demonstração", styles["H"]),

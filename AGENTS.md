@@ -19,9 +19,9 @@ Este laboratório já foi validado com a cópia do modelo pertencente a
 `febraban`. Ao implementar ou alterar uma experiência, trate os itens abaixo
 como contrato, não como sugestões:
 
-- o modelo ativo é o B1 V2 no catálogo `ML_SCHEMA_febraban`; a view pública
-  `v_fraud_predictions` também publica exclusivamente os seus scores de teste;
-- o B1 recebe **sete** features: `amount`, `amount_log`, `category`,
+- o modelo ativo é `fraud_risk_model` no catálogo `ML_SCHEMA_febraban`; a view
+  pública `v_fraud_predictions` também publica exclusivamente os seus scores de teste;
+- o modelo de risco recebe **sete** features: `amount`, `amount_log`, `category`,
   `transaction_hour`, `weekday_number`, `is_weekend` e
   `customer_merchant_distance_km`;
 - `is_fraud` é apenas o target histórico. Nunca faz parte do payload de uma
@@ -39,6 +39,11 @@ Antes de declarar a demo pronta, execute uma rodada real com `febraban` e só
 considere sucesso se `inserted = scored = 50000`, `failedBatches = 0` e
 `scoringFailures = 0`. Compare os indicadores retornados pela API com a tabela
 operacional e com `fraud_demo_public.v_live_transaction_events`.
+
+O QA canônico de 24/08/2026 aprovou os três DB Systems para predição, NL_SQL,
+ML_RAG GPU e memória; consulte `docs/QA-LABORATORIO-CANONICO-2026-08-24.md`
+para os critérios e evidências. Refaça esse QA após qualquer mudança de modelo,
+Vector Store, permissões, serviço da VM ou fluxo de simulação.
 
 ## Acesso deste notebook — preencher somente no evento
 
@@ -74,7 +79,7 @@ FROM ML_SCHEMA_febraban.MODEL_CATALOG;
 | Base Sparkov | Importada | Transações sintéticas, clientes, estabelecimentos, categorias, tempo e geografia. |
 | Camada pública | `fraud_demo_public` | Views seguras para exploração e NL_SQL. |
 | Cluster analítico | HeatWave | Acelera agregações e consultas de dashboard em memória. |
-| Modelo B1 | Treinado | Classificador que estima risco do rótulo histórico sintético. |
+| Modelo de risco | Treinado | Classificador que estima risco do rótulo histórico sintético. |
 | Simulação ao vivo | `fraud_demo.live_transaction_*` | Gera eventos coerentes com a base e armazena scores. |
 | Vector Store + RAG | `febraban_rag` | Documentação sobre base, modelo, métricas, limites e compliance. |
 | NL to SQL | `sys.NL_SQL` | Perguntas sobre dados convertidas em SQL auditável. |
@@ -114,7 +119,7 @@ sensíveis e usam nomes de negócio.
 | `v_merchant_summary` | estabelecimento + categoria | `merchant_name`, `category`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. Use volume mínimo em rankings de taxa. |
 | `v_state_summary` | estado | `state`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
 | `v_live_transaction_events` | evento simulado | `run_id`, `event_id`, contexto da compra, `model_prediction`, `fraud_probability` e `risk_band`. Para fluxo atual, filtre sempre pelo `run_id` ativo. |
-| `v_fraud_predictions` | predição B1 V2 no split de teste | `fraud_probability`, `model_risk_alert`, `decision_threshold=0.60` e o handle `febraban_fraud_manual_xgb_b1_final_v2_20260810`. Use para investigar a avaliação histórica do modelo. |
+| `v_fraud_predictions` | predição histórica no split de teste | `fraud_probability`, `model_risk_alert`, `decision_threshold=0.60` e o handle `fraud_risk_model`. Use para investigar a avaliação histórica do modelo. |
 
 ### Colunas da origem `fraud_demo.transactions_raw`
 
@@ -139,19 +144,18 @@ recurso técnico; para perguntas comuns, use as views públicas.
 
 | Asset | Papel |
 | --- | --- |
-| `features_manual_*_v2` | Camada versionada de features e splits temporais do experimento B1. |
-| `validation_predictions_b1_v2` e scores | Validação usada para entender o threshold. |
-| `test_predictions_b1_v2` e `test_scores_b1_v2` | Avaliação final no teste isolado. |
-| `ML_SCHEMA_admin.MODEL_CATALOG` | Catálogo de origem do B1 original, pertencente a `admin`. |
-| `ML_SCHEMA_febraban.MODEL_CATALOG` | Catálogo da cópia B1 usada pela aplicação e simulação. |
+| `features_manual_*_v2` | Artefatos históricos de preparação de features e splits temporais. Não usar diretamente em novas aplicações. |
+| `fraud_risk_test_scores` | Alias estável da avaliação final no teste isolado. |
+| `ML_SCHEMA_admin.MODEL_CATALOG` | Catálogo de origem do modelo, pertencente a `admin`. |
+| `ML_SCHEMA_febraban.MODEL_CATALOG` | Catálogo do modelo usado pela aplicação e simulação. |
 
-Objetos com `B2` são experimento/evolução futura. O modelo ativo da demo é B1.
+Objetos históricos de experimento não são contratos do laboratório. O modelo ativo é `fraud_risk_model`.
 
 ## Modelo de risco já treinado
 
 | Propriedade | Valor |
 | --- | --- |
-| Handle | `febraban_fraud_manual_xgb_b1_final_v2_20260810` |
+| Handle | `fraud_risk_model` |
 | Proprietário da cópia usada pelo app | `febraban` (`ML_SCHEMA_febraban.MODEL_CATALOG`) |
 | Proprietário do original | `admin` (`ML_SCHEMA_admin.MODEL_CATALOG`) |
 | Tipo | classificação binária |
@@ -175,9 +179,9 @@ janela operacional é de 5.000 eventos por rodada de classificação; o tamanho
 final do lote pode ser ajustado à capacidade do DB System, mas a rotina continua
 sendo `ML_PREDICT_TABLE`, nunca um loop de `ML_PREDICT_ROW`.
 
-### Features efetivamente usadas por B1
+### Features efetivamente usadas pelo modelo
 
-O B1 usa **sete** features, confirmadas no catálogo do modelo:
+O modelo usa **sete** features, confirmadas no catálogo:
 
 1. `amount` — valor da compra.
 2. `amount_log` — `LN(1 + amount)`, para reduzir assimetria de valores altos.
@@ -195,7 +199,7 @@ são auditoria, não features.
 > target ou lista exata de features, consulte primeiro
 > `ML_SCHEMA_febraban.MODEL_CATALOG`; o RAG serve para explicar método,
 > métricas, limites e governança com citações. Não aceite uma lista parcial
-> gerada pelo RAG como contrato de inferência. A resposta correta do B1 contém
+> gerada pelo RAG como contrato de inferência. A resposta correta do modelo contém
 > exatamente as sete features desta seção.
 
 ### Interpretação do score
@@ -231,7 +235,7 @@ tabela carregada, valide `LOAD_STATUS` e `LOAD_PROGRESS` com o administrador.
 ## Documentação vetorizada e ML_RAG
 
 O schema `febraban_rag` contém a documentação vetorizada. A fonte canônica é
-`docs/DOCUMENTO-MODELO-PARA-RAG.md`: dataset, modelo B1, features, split,
+`docs/GUIA-FRAUDE-HEATWAVE.pdf`: dataset, modelo de risco, features, split,
 métricas, threshold, limites, governança e compliance.
 
 Configuração publicada e validada para a demo:
@@ -241,25 +245,24 @@ Configuração publicada e validada para a demo:
 | Embedding dos trechos e da pergunta | `cohere.embed-v4.0`, OCI Generative AI (GPU) |
 | Geração da resposta RAG | `meta.llama-3.3-70b-instruct`, OCI Generative AI (GPU) |
 | Rotina | `sys.ML_RAG` |
-| Vector Store técnico de referência | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823` |
+| Vector Store técnico de referência | `febraban_rag.fraud_risk_knowledge_base` |
 
 Os stores anteriores com `cpu_e5` e versões anteriores de `oci_embed_v4` são
 histórico de testes e podem recuperar cinco features ou o texto antigo. Não os
 use como padrão. Sempre informe `embed_model_id='cohere.embed-v4.0'` ao chamar
 `ML_RAG`, pois a pergunta precisa usar o mesmo modelo de embedding do store.
 
-Para a prova funcional, chame `ML_RAG` exclusivamente com o store REV3 ativo.
-Não use stores de revisão anterior como fonte de resposta.
+Para a prova funcional, chame `ML_RAG` exclusivamente com o store canônico.
+Não use stores históricos como fonte de resposta.
 
-O PDF ativo é `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf`. Ele descreve
-as **sete** features e o threshold operacional único de `0,60`. Antes de
-publicar uma nova versão, gere um PDF novo, crie um Vector Store novo e valide
-as respostas sobre features e threshold antes de alterar a configuração da
-aplicação.
+O PDF ativo é `GUIA-FRAUDE-HEATWAVE.pdf`. Ele descreve as **sete** features e
+o threshold operacional único de `0,60`. Antes de publicar uma atualização,
+gere um PDF novo, crie um Vector Store novo e valide as respostas sobre
+features e threshold antes de alterar a configuração da aplicação.
 
 Use **ML_RAG** para perguntas documentais, como:
 
-- “Quais features o B1 usa e por quê?”
+- “Quais features o modelo de risco usa e por quê?”
 - “Por que acurácia não é suficiente?”
 - “O que o score significa?”
 - “Quais são as limitações e cuidados de compliance?”
@@ -315,7 +318,7 @@ explícito e plano de rollback.
 
 ## Compartilhamento obrigatório do modelo para `febraban`
 
-O B1 original foi treinado por `admin`. Conceder uma role administrativa não
+O modelo de origem foi treinado por `admin`. Conceder uma role administrativa não
 faz a rotina ML procurar automaticamente o catálogo de outro usuário. Para a
 simulação, foi importada uma cópia com o mesmo handle em
 `ML_SCHEMA_febraban.MODEL_CATALOG` nos três clones.
@@ -364,7 +367,8 @@ começarmos o laboratório.
 
 - [Visão geral](README.md)
 - [Dados e camada pública](docs/02-DADOS-E-CAMADA-PUBLICA.md)
-- [Modelo B1 e RAG](docs/DOCUMENTO-MODELO-PARA-RAG.md)
-- [Validação do ML_RAG](docs/VALIDACAO-RAG-MODELO-B1-V2.md)
+- [Modelo e RAG](docs/GUIA-MODELO-E-DADOS-RAG.md)
+- [Validação do ML_RAG](docs/VALIDACAO-RAG-MODELO.md)
+- [QA canônico dos três bancos](docs/QA-LABORATORIO-CANONICO-2026-08-24.md)
 - [Evals de linguagem natural](docs/EVALS-LINGUAGEM-NATURAL-AUTOML.md)
 - [Prompts para criar aplicações](docs/06-APLICACAO-GUIADA-POR-LLM.md)

@@ -162,12 +162,12 @@ somente `SELECT, SHOW VIEW` nesse schema público.
 
 ### 5. Consolidar features e separar treino/teste
 
-O modelo B1 usa somente dados disponíveis no momento da compra:
+O modelo de risco usa somente dados disponíveis no momento da compra:
 `amount`, `amount_log`, `category`, `transaction_hour`, `weekday_number`,
 `is_weekend` e `customer_merchant_distance_km`.
 
 ```sql
-CREATE TABLE fraud_ml.features_b1 AS
+CREATE TABLE fraud_ml.fraud_risk_features AS
 SELECT transaction_id, source_split, trans_date_trans_time AS transaction_timestamp,
        CAST(amt AS DECIMAL(14,2)) AS amount,
        LN(1+CAST(amt AS DECIMAL(14,2))) AS amount_log,
@@ -183,15 +183,15 @@ SELECT transaction_id, source_split, trans_date_trans_time AS transaction_timest
 FROM fraud_demo.transactions_raw;
 
 CREATE TABLE fraud_ml.train_final AS
-SELECT * FROM fraud_ml.features_b1 WHERE source_split='train';
+SELECT * FROM fraud_ml.fraud_risk_features WHERE source_split='train';
 CREATE TABLE fraud_ml.test_final AS
-SELECT * FROM fraud_ml.features_b1 WHERE source_split='test';
+SELECT * FROM fraud_ml.fraud_risk_features WHERE source_split='test';
 
 CREATE TABLE fraud_ml.train_development AS
-SELECT * FROM fraud_ml.features_b1
+SELECT * FROM fraud_ml.fraud_risk_features
 WHERE source_split='train' AND transaction_timestamp < '2020-03-06 07:16:43';
 CREATE TABLE fraud_ml.train_validation AS
-SELECT * FROM fraud_ml.features_b1
+SELECT * FROM fraud_ml.fraud_risk_features
 WHERE source_split='train' AND transaction_timestamp >= '2020-03-06 07:16:43';
 ```
 
@@ -202,7 +202,7 @@ threshold olhando o split `test`.
 
 ```sql
 -- Modelo de desenvolvimento: não viu o período de validação.
-SET @model_dev='fraud_xgb_b1_dev_v1';
+SET @model_dev='fraud_risk_model_development';
 CALL sys.ML_TRAIN(
   'fraud_ml.train_development', 'is_fraud',
   JSON_OBJECT(
@@ -242,7 +242,7 @@ perto de 0,5%. Depois de congelar o threshold, treine o modelo final com todo
 `train_final` e avalie-o **uma única vez** em `test_final`:
 
 ```sql
-SET @model='fraud_xgb_b1_v1';
+SET @model='fraud_risk_model';
 CALL sys.ML_TRAIN(
   'fraud_ml.train_final', 'is_fraud',
   JSON_OBJECT(
@@ -292,21 +292,21 @@ durante `ML_PREDICT_TABLE`.
 
 ### 7. Vetorizar o documento do modelo e testar RAG
 
-Use [DOCUMENTO-MODELO-PARA-RAG.md](docs/DOCUMENTO-MODELO-PARA-RAG.md) como fonte
+Use [GUIA-MODELO-E-DADOS-RAG.md](docs/GUIA-MODELO-E-DADOS-RAG.md) como fonte
 canônica. Exporte-o a PDF, envie-o a um bucket privado no Object Storage e
 configure Resource Principal para o DB System lê-lo.
 
 ```sql
 SET @options=JSON_OBJECT(
   'schema_name','febraban_rag',
-  'table_name','modelo_b1_docs',
+  'table_name','fraud_risk_knowledge_base',
   'language','pt',
   'embed_model_id','cohere.embed-v4.0',
   'formats',JSON_ARRAY('pdf'),
   'chunking',JSON_OBJECT('split_by','recursive')
 );
 CALL sys.VECTOR_STORE_LOAD(
-  'oci://SEU_BUCKET@SEU_NAMESPACE/febraban/documento-modelo-rag.pdf', @options
+  'oci://SEU_BUCKET@SEU_NAMESPACE/febraban/GUIA-FRAUDE-HEATWAVE.pdf', @options
 );
 ```
 
@@ -315,19 +315,19 @@ rotina. Ao finalizar, descubra o nome real criado — em cargas de PDF a tabela
 pode receber sufixo de formato — e só então consulte RAG:
 
 ```sql
-SHOW TABLES FROM febraban_rag LIKE 'modelo_b1_docs%';
+SHOW TABLES FROM febraban_rag LIKE 'fraud_risk_knowledge_base%';
 SET @rag_options=JSON_OBJECT(
-  'vector_store',JSON_ARRAY('febraban_rag.NOME_REAL_DA_TABELA'),
+  'vector_store',JSON_ARRAY('febraban_rag.fraud_risk_knowledge_base'),
   'embed_model_id','cohere.embed-v4.0',
   'n_citations',5,
   'model_options',JSON_OBJECT('model_id','meta.llama-3.3-70b-instruct')
 );
-CALL sys.ML_RAG('Quais features o modelo B1 usa?',@rag_answer,@rag_options);
+CALL sys.ML_RAG('Quais features o modelo de risco usa?',@rag_answer,@rag_options);
 SELECT JSON_PRETTY(@rag_answer);
 ```
 
 No laboratório publicado, a fonte ativa é
-`febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823`: PDF vigente,
+`febraban_rag.fraud_risk_knowledge_base`: PDF vigente,
 `cohere.embed-v4.0` para embeddings e `meta.llama-3.3-70b-instruct` para a
 resposta. Use sempre o mesmo `embed_model_id` da carga ao consultar o store.
 
