@@ -25,6 +25,11 @@ reais e **parar** em caso de divergência, antes de escrever código. O contrato
 define variáveis, pools, tabelas live, API, limites de segurança e testes de
 aceite; por isso elimina a necessidade de o LLM adivinhar objetos do seu banco.
 
+Para um ambiente já provisionado como o da demonstração, consulte também o
+[inventário ativo de tabelas, views e campos](docs/INVENTARIO-ATIVO-DO-LABORATORIO.md).
+Ele informa a fonte certa para investigação, simulação, `ML_PREDICT_TABLE` e
+ML_RAG, além de um SQL para conferir o contrato diretamente no DB System.
+
 ## Guia completo: do zero ao laboratório
 
 Siga as etapas abaixo na ordem. Os documentos da pasta `docs/` aprofundam cada

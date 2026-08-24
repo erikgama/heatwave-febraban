@@ -106,13 +106,18 @@ Arquivos de origem: `fraudTrain.csv` e `fraudTest.csv`.
 
 ## Schemas, tabelas e views
 
+O inventário detalhado abaixo foi consultado com `febraban` nos três DB Systems
+em 24/08/2026. Os nomes, tipos e ordem das colunas dos objetos ativos são
+idênticos nos três ambientes. Para a lista completa de campos e o SQL de
+revalidação, leia [Inventário ativo do laboratório](docs/INVENTARIO-ATIVO-DO-LABORATORIO.md).
+
 ### `fraud_demo` — origem e eventos operacionais
 
 | Objeto | Tipo | Conteúdo e uso |
 | --- | --- | --- |
-| `transactions_raw` | tabela | Base Sparkov original. Contém PII sintética, cartão e coordenadas; não é fonte para chat ou UI pública. |
-| `live_transaction_seed` | tabela | Amostra derivada usada para criar transações simuladas coerentes. |
-| `live_transaction_events` | tabela | Eventos de cada simulação, identificados por `run_id`, incluindo resultados de classificação. |
+| `transactions_raw` | tabela | Base Sparkov original. Campos: `transaction_id`, `source_split`, data/hora, cartão, merchant, categoria, valor, PII sintética, geografia, profissão, data de nascimento e `is_fraud`. Não é fonte para chat/UI pública. |
+| `live_transaction_seed` | tabela | Semente coerente para simulação. Campos: `source_transaction_id`, merchant, categoria, cidade/estado, `amount`, `amount_log`, hora, dia da semana, fim de semana e distância. |
+| `live_transaction_events` | tabela | Eventos da rodada. Campos: `event_id`, `run_id`, instante, cliente sintético, merchant, categoria, local, features, `model_prediction`, `fraud_probability`, `risk_band` e `created_at`. |
 
 ### `fraud_demo_public` — camada recomendada
 
@@ -121,12 +126,12 @@ sensíveis e usam nomes de negócio.
 
 | View | Granularidade | Colunas e finalidade |
 | --- | --- | --- |
-| `v_transactions_investigation` | transação histórica | `transaction_id`, `source_split`, `transaction_timestamp`, `customer_id` mascarado, `merchant_name`, `category`, `amount`, `city`, `state`, `transaction_hour`, `weekday_number`, `is_weekend`, `customer_merchant_distance_km`, `dataset_fraud_label`. É a view principal para investigação. |
-| `v_category_summary` | categoria | `category`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
-| `v_merchant_summary` | estabelecimento + categoria | `merchant_name`, `category`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. Use volume mínimo em rankings de taxa. |
-| `v_state_summary` | estado | `state`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
-| `v_live_transaction_events` | evento simulado | `run_id`, `event_id`, contexto da compra, `model_prediction`, `fraud_probability` e `risk_band`. Para fluxo atual, filtre sempre pelo `run_id` ativo. |
-| `v_fraud_predictions` | predição histórica no split de teste | `fraud_probability`, `model_risk_alert`, `decision_threshold=0.60` e o handle `fraud_risk_model`. Use para investigar a avaliação histórica do modelo. |
+| `v_transactions_investigation` | transação histórica | `transaction_id`, split, timestamp/data/hora/dia, cliente mascarado, merchant, categoria, valor, sexo/faixa etária, cidade/estado/população, profissão, distância, `dataset_fraud_label` e descrição do rótulo. É a view principal para investigação. |
+| `v_category_summary` | categoria | `category`, `transaction_count`, `total_amount`, `avg_amount`, `labeled_fraud_count`, `labeled_fraud_pct`. |
+| `v_merchant_summary` | estabelecimento + categoria | `merchant_name`, `category`, `transaction_count`, `total_amount`, `avg_amount`, `labeled_fraud_count`, `labeled_fraud_pct`. Use volume mínimo em rankings de taxa. |
+| `v_state_summary` | estado | `state`, `transaction_count`, `total_amount`, `avg_amount`, `labeled_fraud_count`, `labeled_fraud_pct`. |
+| `v_live_transaction_events` | evento simulado | `event_id`, `run_id`, instante, cliente, merchant, categoria, cidade/estado, features, `model_prediction`, `fraud_probability`, `risk_band`, `created_at`. Para fluxo atual, filtre sempre pelo `run_id` ativo. |
+| `v_fraud_predictions` | predição histórica no split de teste | Todas as colunas seguras da investigação, mais `fraud_probability`, `model_risk_alert`, `decision_threshold`, `model_handle` e `predicted_at`. Use para investigar a avaliação histórica do modelo. |
 
 ### Colunas da origem `fraud_demo.transactions_raw`
 
@@ -153,6 +158,8 @@ recurso técnico; para perguntas comuns, use as views públicas.
 | --- | --- |
 | `features_manual_*_v2` | Artefatos históricos de preparação de features e splits temporais. Não usar diretamente em novas aplicações. |
 | `fraud_risk_test_scores` | Alias estável da avaliação final no teste isolado. |
+| `live_scoring_stage` | Entrada do `ML_PREDICT_TABLE`: `event_id` mais as sete features canônicas. |
+| `live_scoring_result` | Saída do lote: colunas da stage mais `Prediction` e `ml_results` JSON. |
 | `ML_SCHEMA_admin.MODEL_CATALOG` | Catálogo de origem do modelo, pertencente a `admin`. |
 | `ML_SCHEMA_febraban.MODEL_CATALOG` | Catálogo do modelo usado pela aplicação e simulação. |
 
@@ -241,9 +248,11 @@ tabela carregada, valide `LOAD_STATUS` e `LOAD_PROGRESS` com o administrador.
 
 ## Documentação vetorizada e ML_RAG
 
-O schema `febraban_rag` contém a documentação vetorizada. A fonte canônica é
-`docs/GUIA-FRAUDE-HEATWAVE.pdf`: dataset, modelo de risco, features, split,
-métricas, threshold, limites, governança e compliance.
+O schema `febraban_rag` contém a documentação vetorizada. A tabela canônica é
+`fraud_risk_knowledge_base`, com `document_name`, `metadata`, `document_id`,
+`segment_number`, `segment`, `segment_embedding` e `segment_metadata`. A fonte
+canônica é `docs/GUIA-FRAUDE-HEATWAVE.pdf`: dataset, modelo de risco, features,
+split, métricas, threshold, limites, governança e compliance.
 
 Configuração publicada e validada para a demo:
 
@@ -283,7 +292,7 @@ transação ou resultados da rodada. Descubra o nome exato do Vector Store com
 Para perguntas de dados, use `sys.NL_SQL` limitado ao schema
 `fraud_demo_public` e `execute=false`. A allowlist atual contém
 `v_transactions_investigation`, `v_category_summary`, `v_merchant_summary`,
-`v_state_summary` e `v_live_transaction_events`. Valide o SQL antes de executar: somente
+`v_state_summary`, `v_live_transaction_events` e `v_fraud_predictions`. Valide o SQL antes de executar: somente
 uma instrução `SELECT` ou `WITH ... SELECT` nas views permitidas.
 
 O modelo de geração aprovado para NL_SQL também é
@@ -322,6 +331,18 @@ Exemplos:
 
 Não substitua modelo, Vector Store, views públicas ou simulação sem pedido
 explícito e plano de rollback.
+
+### Dica curta para uma simulação própria
+
+Para simular transações chegando, leia as sementes em
+`fraud_demo.live_transaction_seed`, gere um `run_id` novo e grave os eventos
+em `fraud_demo.live_transaction_events`. Preserve as sete features e
+`amount_log = LN(1 + amount)`. Faça o scoring em lote por
+`fraud_ml.live_scoring_stage` → `sys.ML_PREDICT_TABLE` →
+`fraud_ml.live_scoring_result`; depois persista score e faixa de risco no
+evento. Consulte o resultado por `fraud_demo_public.v_live_transaction_events`
+filtrando o `run_id`. Para alto volume, use `ML_PREDICT_TABLE`, não um loop de
+`ML_PREDICT_ROW`.
 
 ## Compartilhamento obrigatório do modelo para `febraban`
 
@@ -374,6 +395,7 @@ começarmos o laboratório.
 
 - [Visão geral](README.md)
 - [Dados e camada pública](docs/02-DADOS-E-CAMADA-PUBLICA.md)
+- [Inventário ativo: tabelas, views e campos](docs/INVENTARIO-ATIVO-DO-LABORATORIO.md)
 - [Modelo e RAG](docs/GUIA-MODELO-E-DADOS-RAG.md)
 - [Validação do ML_RAG](docs/VALIDACAO-RAG-MODELO.md)
 - [QA canônico dos três bancos](docs/QA-LABORATORIO-CANONICO-2026-08-24.md)
