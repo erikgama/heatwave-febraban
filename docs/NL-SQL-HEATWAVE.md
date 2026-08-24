@@ -73,7 +73,7 @@ Configuração do RAG validada:
 
 ```bash
 USE_HEATWAVE_RAG=true
-HEATWAVE_RAG_VECTOR_STORE=febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823
+HEATWAVE_RAG_VECTOR_STORE=febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823
 HEATWAVE_RAG_EMBED_MODEL=cohere.embed-v4.0
 ```
 
