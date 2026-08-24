@@ -10,6 +10,34 @@ descarregue ou apague esses recursos por padrão.
 O visitante usa Codex para entender os assets prontos e criar algo novo sobre
 eles somente quando solicitado.
 
+## Verdades operacionais que não podem ser reinterpretadas
+
+Este laboratório já foi validado com a cópia do modelo pertencente a
+`febraban`. Ao implementar ou alterar uma experiência, trate os itens abaixo
+como contrato, não como sugestões:
+
+- o modelo ativo é o B1 V2 no catálogo `ML_SCHEMA_febraban`, e não o modelo V1
+  exposto pela view histórica `v_fraud_predictions`;
+- o B1 recebe **sete** features: `amount`, `amount_log`, `category`,
+  `transaction_hour`, `weekday_number`, `is_weekend` e
+  `customer_merchant_distance_km`;
+- `is_fraud` é apenas o target histórico. Nunca faz parte do payload de uma
+  nova predição;
+- o alerta operacional da simulação é `fraud_probability >= 0.60`. Os valores
+  0,27 e 0,33 pertencem, respectivamente, a uma avaliação experimental B1 e a
+  uma view histórica de outro modelo; não devem aparecer na interface ou na
+  explicação da simulação;
+- o fluxo existente grava em `fraud_demo.live_transaction_events`, usa
+  `fraud_demo.live_transaction_seed` como semente e deve isolar cada rodada
+  por `run_id`;
+- uma única instância do worker de simulação pode usar as tabelas de estágio e
+  resultado ML compartilhadas por banco.
+
+Antes de declarar a demo pronta, execute uma rodada real com `febraban` e só
+considere sucesso se `inserted = scored = 50000`, `failedBatches = 0` e
+`scoringFailures = 0`. Compare os indicadores retornados pela API com a tabela
+operacional e com `fraud_demo_public.v_live_transaction_events`.
+
 ## Acesso deste notebook — preencher somente no evento
 
 > Este bloco é local e temporário. Preencha no notebook do evento; não envie ao

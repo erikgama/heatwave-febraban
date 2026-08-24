@@ -67,10 +67,34 @@ As features registradas no catálogo do modelo são:
 - 0,85 e 0,95 são faixas visuais de priorização.
 - Cada rodada usa `run_id`; a limpeza só pode afetar o `run_id` encerrado.
 
+## Validação E2E da aplicação com `febraban`
+
+Em 23/08/2026, a rota local `POST /api/live/start` foi executada com
+`MYSQL_USER=febraban` contra o clone principal. A rodada
+`aa094bcb-05fe-4ef2-b1fb-73bb3a6a13b9` concluiu sem intervenção manual.
+
+| Evidência | Resultado |
+| --- | ---: |
+| Eventos inseridos | 50.000 |
+| Eventos classificados | 50.000 |
+| Falhas de lote | 0 |
+| Falhas de classificação | 0 |
+| Alertas score ≥ 60% | 612 |
+| Alertas score ≥ 85% | 441 |
+| Alertas score ≥ 95% | 257 |
+| Maior probabilidade | 99,9% |
+| Ingestão | 121,45 s |
+| Rodada ponta a ponta | 126,85 s |
+
+Os mesmos totais foram conferidos em três camadas: estado retornado por
+`GET /api/live`, tabela `fraud_demo.live_transaction_events` e view
+`fraud_demo_public.v_live_transaction_events`. A UI não deve chamar uma rodada
+de concluída antes de `inserted = scored = 50000`.
+
 ## Itens que continuam obrigatórios antes do evento
 
-1. Executar o fluxo completo de 50.000 eventos com a aplicação configurada
-   para `MYSQL_USER=febraban` e o handle acima.
+1. Reexecutar o fluxo completo depois de mudanças no backend, modelo, cluster
+   ou credenciais, sempre com `MYSQL_USER=febraban` e o handle acima.
 2. Confirmar que os 10 checkpoints de 5.000 foram classificados, sem misturar
    rodadas e sem apresentar sucesso antes de `scored = 50.000`.
 3. Registrar separadamente o tempo de ingestão e o tempo final de classificação.
