@@ -20,7 +20,7 @@ o bucket. Não torne o bucket público por conveniência.
 ```sql
 CREATE SCHEMA IF NOT EXISTS febraban_rag;
 SET @options=JSON_OBJECT('schema_name','febraban_rag','table_name','modelo_b1_docs',
- 'language','pt','embed_model_id','multilingual-e5-small',
+ 'language','pt','embed_model_id','cohere.embed-v4.0',
  'formats',JSON_ARRAY('pdf'),
  'chunking',JSON_OBJECT('split_by','recursive'));
 CALL sys.VECTOR_STORE_LOAD(
@@ -38,14 +38,16 @@ Em algumas versões, o carregador acrescenta um sufixo referente ao formato do
 arquivo. Copie o nome realmente retornado e use-o nos comandos seguintes; não
 presuma que a tabela se chama exatamente `modelo_b1_docs`.
 
-Use o mesmo embedding para documento e consulta. Confirme modelos suportados na
-sua região antes de escolher opções OCI/GPU.
+Use o mesmo embedding para documento e consulta. Neste laboratório, o embedding
+ativo é `cohere.embed-v4.0` no OCI Generative AI (GPU); não use os stores
+históricos com `multilingual-e5-small` como fonte da demo.
 
 ## Consultar RAG
 
 ```sql
 SET @rag_options=JSON_OBJECT(
  'vector_store',JSON_ARRAY('febraban_rag.NOME_REAL_DA_TABELA'),
+ 'embed_model_id','cohere.embed-v4.0',
  'n_citations',5,
  'model_options',JSON_OBJECT('model_id','meta.llama-3.3-70b-instruct')
 );

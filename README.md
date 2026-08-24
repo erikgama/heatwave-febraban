@@ -302,7 +302,7 @@ SET @options=JSON_OBJECT(
   'schema_name','febraban_rag',
   'table_name','modelo_b1_docs',
   'language','pt',
-  'embed_model_id','multilingual-e5-small',
+  'embed_model_id','cohere.embed-v4.0',
   'formats',JSON_ARRAY('pdf'),
   'chunking',JSON_OBJECT('split_by','recursive')
 );
@@ -319,12 +319,18 @@ pode receber sufixo de formato — e só então consulte RAG:
 SHOW TABLES FROM febraban_rag LIKE 'modelo_b1_docs%';
 SET @rag_options=JSON_OBJECT(
   'vector_store',JSON_ARRAY('febraban_rag.NOME_REAL_DA_TABELA'),
+  'embed_model_id','cohere.embed-v4.0',
   'n_citations',5,
   'model_options',JSON_OBJECT('model_id','meta.llama-3.3-70b-instruct')
 );
 CALL sys.ML_RAG('Quais features o modelo B1 usa?',@rag_answer,@rag_options);
 SELECT JSON_PRETTY(@rag_answer);
 ```
+
+No laboratório publicado, a fonte ativa é
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`: PDF revisado,
+`cohere.embed-v4.0` para embeddings e `meta.llama-3.3-70b-instruct` para a
+resposta. Use sempre o mesmo `embed_model_id` da carga ao consultar o store.
 
 Valide citações para perguntas sobre features, dataset, threshold, métricas e
 limitações antes de apresentar RAG.

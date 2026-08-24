@@ -215,19 +215,21 @@ Configuração publicada e validada para a demo:
 
 | Etapa | Tecnologia/modelo |
 | --- | --- |
-| Embedding dos trechos e da pergunta | `multilingual-e5-small`, embarcado no HeatWave (CPU) |
+| Embedding dos trechos e da pergunta | `cohere.embed-v4.0`, OCI Generative AI (GPU) |
 | Geração da resposta RAG | `meta.llama-3.3-70b-instruct`, OCI Generative AI (GPU) |
 | Rotina | `sys.ML_RAG` |
-| Vector Store técnico de referência | `febraban_rag.modelo_b1_v2_cpu_e5_pdf` |
+| Vector Store técnico de referência | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823` |
 
-Também existe `febraban_rag.guia_laboratorio_febraban_cpu_e5_v2`. Não use
-`cohere.embed-v4.0` nem stores de experimento como configuração padrão.
+Os stores anteriores com `cpu_e5` e versões anteriores de `oci_embed_v4` são
+histórico de testes e podem recuperar cinco features ou o texto antigo. Não os
+use como padrão. Sempre informe `embed_model_id='cohere.embed-v4.0'` ao chamar
+`ML_RAG`, pois a pergunta precisa usar o mesmo modelo de embedding do store.
 
-> Atenção: a versão já vetorizada do guia pode citar a definição antiga de cinco
-> features e o threshold experimental `0,27`. Para fatos do B1 ativo, consulte
-> primeiro `ML_SCHEMA_febraban.MODEL_CATALOG`. Antes de usar RAG para explicar
-> o B1 V2 em uma nova demo, gere uma nova versão do documento e um novo Vector
-> Store, depois valide recuperação de features e thresholds.
+O PDF ativo é `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf`. Ele descreve
+as **sete** features e distingue `0,27` (validação histórica) de `0,60`
+(threshold operacional da simulação). Antes de publicar uma nova versão,
+gere um PDF novo, crie um Vector Store novo e valide essas duas perguntas
+críticas antes de alterar a configuração da aplicação.
 
 Use **ML_RAG** para perguntas documentais, como:
 

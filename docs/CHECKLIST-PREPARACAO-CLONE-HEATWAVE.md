@@ -169,10 +169,10 @@ Esperado: JSON com a previsão e probabilidades. No clone validado em
 22/08/2026, a cópia do modelo pertencente a `febraban` exige as sete features
 acima. `is_fraud` é o target histórico e **não** entra em uma nova predição.
 
-> Atenção: o PDF B1 V2 atualmente recuperado pelo RAG descreve uma versão com
-> cinco features. Antes de apresentá-lo como documentação do modelo carregado,
-> alinhe o PDF e o Vector Store ao contrato efetivo, ou carregue a cópia de
-> modelo compatível com a documentação.
+O PDF e Vector Store ativos já estão alinhados ao contrato de sete features:
+`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf` e
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`. Não reutilize os stores
+históricos com cinco features.
 
 Se `ML_PREDICT_TABLE` ou `ML_MODEL_LOAD` retornar erro de catálogo, faça o
 compartilhamento oficial: exporte como proprietário e importe como `febraban`.
@@ -220,14 +220,14 @@ novo, sem sobrescrever stores anteriores:
 
 ```sql
 CALL sys.VECTOR_STORE_LOAD(
-  'oci://<BUCKET>@<NAMESPACE>/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG.pdf',
+  'oci://<BUCKET>@<NAMESPACE>/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf',
   JSON_OBJECT(
     'schema_name', 'febraban_rag',
-    'table_name', 'modelo_b1_v2_cpu_e5_<IDENTIFICADOR_DO_CLONE>',
-    'task_name', 'febraban_modelo_b1_v2_<IDENTIFICADOR_DO_CLONE>',
+    'table_name', 'modelo_b1_v2_oci_embed_v4_rev2_<IDENTIFICADOR_DO_CLONE>',
+    'task_name', 'febraban_rag_gpu_rev2_<IDENTIFICADOR_DO_CLONE>',
     'language', 'pt',
-    'embed_model_id', 'multilingual-e5-small',
-    'description', 'Guia B1 V2 para RAG do clone FEBRABAN.'
+    'embed_model_id', 'cohere.embed-v4.0',
+    'description', 'Guia B1 V2 revisado: sete features e threshold operacional 0.60; embedding OCI GPU.'
   )
 );
 ```
@@ -243,6 +243,7 @@ CALL sys.ML_RAG(
   @rag_output,
   JSON_OBJECT(
     'vector_store', JSON_ARRAY('febraban_rag.<NOME_REAL_DO_STORE>'),
+    'embed_model_id', 'cohere.embed-v4.0',
     'n_citations', 6,
     'model_options', JSON_OBJECT(
       'model_id', 'meta.llama-3.3-70b-instruct',
@@ -253,8 +254,10 @@ CALL sys.ML_RAG(
 SELECT JSON_PRETTY(@rag_output);
 ```
 
-Esperado: texto com `0,27` e citações. Registre o nome real do store em
-`HEATWAVE_RAG_VECTOR_STORE` na VM.
+Esperado: texto que informa `0,60` como threshold operacional e explica que
+`0,27` é referência histórica de validação, sempre com citações. Registre o
+nome real do store em `HEATWAVE_RAG_VECTOR_STORE` e
+`cohere.embed-v4.0` em `HEATWAVE_RAG_EMBED_MODEL` na VM.
 
 > Importante: antes de `ML_RAG`, a sessão deve usar
 > `SET SESSION use_secondary_engine = OFF`. A sessão `FORCED` é exclusiva das
@@ -307,6 +310,7 @@ USE_HEATWAVE_NL_SQL=true
 HEATWAVE_NL_SQL_MODEL=meta.llama-3.3-70b-instruct
 USE_HEATWAVE_RAG=true
 HEATWAVE_RAG_VECTOR_STORE=febraban_rag.<NOME_REAL_DO_STORE>
+HEATWAVE_RAG_EMBED_MODEL=cohere.embed-v4.0
 HEATWAVE_MODEL_HANDLE=<HANDLE_DO_MODELO_DO_FEBRABAN>
 ```
 
@@ -344,6 +348,7 @@ USE_HEATWAVE_NL_SQL=true \
 HEATWAVE_NL_SQL_MODEL=meta.llama-3.3-70b-instruct \
 USE_HEATWAVE_RAG=true \
 HEATWAVE_RAG_VECTOR_STORE='febraban_rag.<NOME_REAL_DO_STORE>' \
+HEATWAVE_RAG_EMBED_MODEL='cohere.embed-v4.0' \
 HEATWAVE_RAG_TIMEOUT_MS=30000 \
 ./node_modules/.bin/tsx scripts/validate-clone-agent.ts
 ```

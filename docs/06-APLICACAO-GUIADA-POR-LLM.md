@@ -73,7 +73,7 @@ concorrência, erro do modelo e recuperação sem bloquear o dashboard.
 
 ```text
 Na mesma página, inclua uma seção "Transações classificadas no fluxo". Mostre
-cards consolidados para classificadas e para faixas score >=27%, >=50% e >=85%,
+cards consolidados para classificadas e para faixas score >=60%, >=85% e >=95%,
 sem duplicar indicadores. Adicione tabela paginada de todas as transações do
 run_id, spinner por item enquanto a predição estiver pendente e modal de detalhe
 ao clicar: data/hora, valor, cliente pseudonimizado, estabelecimento, categoria,

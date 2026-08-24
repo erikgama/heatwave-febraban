@@ -75,6 +75,15 @@ usam `ML_RAG` e citações. O visitante usa views públicas somente leitura, o
 backend bloqueia DDL/DML, SQL multi-instrução e relações fora da allowlist, e a
 memória do chat dura apenas a sessão.
 
+## Publicação vetorial aprovada para a demo
+
+Esta fonte foi revisada e publicada como
+`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf`. O Vector Store ativo é
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`, carregado com
+`cohere.embed-v4.0` no OCI Generative AI (GPU). As respostas usam
+`meta.llama-3.3-70b-instruct` e devem informar citações. O embedding da
+consulta precisa ser o mesmo da carga: `cohere.embed-v4.0`.
+
 ## Governança
 
 O laboratório é educacional e demonstrativo. Produção exige validação de dados

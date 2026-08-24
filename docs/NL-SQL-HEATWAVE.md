@@ -73,11 +73,13 @@ Configuração do RAG validada:
 
 ```bash
 USE_HEATWAVE_RAG=true
-HEATWAVE_RAG_VECTOR_STORE=febraban_rag.modelo_b1_v2_cpu_e5_pdf
+HEATWAVE_RAG_VECTOR_STORE=febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823
+HEATWAVE_RAG_EMBED_MODEL=cohere.embed-v4.0
 ```
 
-O Vector Store usa `multilingual-e5-small` embarcado no HeatWave para embeddings
-e `meta.llama-3.3-70b-instruct` para geração. O backend manda a pergunta atual,
+O Vector Store usa `cohere.embed-v4.0` via OCI Generative AI (GPU) tanto para
+os segmentos quanto para a pergunta e `meta.llama-3.3-70b-instruct` para geração.
+O backend manda a pergunta atual,
 um resumo seguro da memória e instruções para não tratar a memória como fonte
 documental.
 

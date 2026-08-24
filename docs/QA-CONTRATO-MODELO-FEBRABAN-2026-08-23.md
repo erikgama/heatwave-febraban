@@ -106,8 +106,9 @@ de concluída antes de `inserted = scored = 50000`.
 
 ## Divergências documentais ainda a resolver no RAG
 
-O catálogo do B1 atual confirma sete features e threshold operacional de 0,60,
-mas o Vector Store já existente pode recuperar uma versão antiga que cita cinco
-features e o threshold experimental de 0,27. Antes de usar RAG para explicar o
-modelo ativo, criar um documento revisado, carregá-lo em novo Vector Store e
-executar regressão de perguntas sobre features e thresholds.
+O catálogo do B1 atual confirma sete features e threshold operacional de 0,60.
+A correção RAG foi concluída em 23/08/2026: o PDF REV2 foi carregado no store
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823` com
+`cohere.embed-v4.0` via OCI Generative AI (GPU). As perguntas de aceite sobre
+features e threshold foram validadas como `febraban`; stores com cinco features
+ou 0,27 como regra permanecem apenas como histórico e não devem ser usados.

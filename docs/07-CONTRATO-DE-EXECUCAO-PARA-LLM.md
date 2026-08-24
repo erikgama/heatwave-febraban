@@ -88,7 +88,8 @@ referência são:
 
 ```text
 HEATWAVE_MODEL_HANDLE=febraban_fraud_manual_xgb_b1_final_v2_20260810
-HEATWAVE_VECTOR_STORE=febraban_rag.modelo_b1_v2_cpu_e5_pdf
+HEATWAVE_VECTOR_STORE=febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823
+HEATWAVE_RAG_EMBED_MODEL=cohere.embed-v4.0
 HEATWAVE_NL_SQL_MODEL=meta.llama-3.3-70b-instruct
 HEATWAVE_RAG_MODEL=meta.llama-3.3-70b-instruct
 RISK_THRESHOLD=0.60
