@@ -192,6 +192,13 @@ O B1 usa **sete** features, confirmadas no catálogo do modelo:
 `is_fraud` não é enviado em uma nova predição: ele é o target. IDs e timestamp
 são auditoria, não features.
 
+> Regra de precisão para agentes: para responder sobre **handle**, proprietário,
+> target ou lista exata de features, consulte primeiro
+> `ML_SCHEMA_febraban.MODEL_CATALOG`; o RAG serve para explicar método,
+> métricas, limites e governança com citações. Não aceite uma lista parcial
+> gerada pelo RAG como contrato de inferência. A resposta correta do B1 contém
+> exatamente as sete features desta seção.
+
 ### Interpretação do score
 
 - Score é probabilidade estimada da classe histórica positiva; não confirma
@@ -242,6 +249,12 @@ Os stores anteriores com `cpu_e5` e versões anteriores de `oci_embed_v4` são
 histórico de testes e podem recuperar cinco features ou o texto antigo. Não os
 use como padrão. Sempre informe `embed_model_id='cohere.embed-v4.0'` ao chamar
 `ML_RAG`, pois a pergunta precisa usar o mesmo modelo de embedding do store.
+
+Alguns stores históricos são tabelas Lakehouse com `SECONDARY_LOAD=0`; um
+`SELECT` direto nelas pode retornar erro `3877` de tabela não carregada. Isso
+não é evidência de falha do RAG ativo. Para auditoria, use
+`information_schema.TABLES`/`SHOW TABLES`; para a prova funcional, chame
+`ML_RAG` exclusivamente com o store REV2 ativo.
 
 O PDF ativo é `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf`. Ele descreve
 as **sete** features e distingue `0,27` (validação histórica) de `0,60`
