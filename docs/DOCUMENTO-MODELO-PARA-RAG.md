@@ -46,11 +46,10 @@ Use precisão, recall, F1, ROC AUC, volume de alertas e matriz de confusão.
 Acurácia isolada não basta porque a classe positiva é muito rara; prever sempre
 a classe majoritária pode dar acurácia alta e ser inútil para investigar risco.
 
-O threshold de **0,27** é uma referência do experimento de validação B1. Ele
-não é universal. A operação atual da simulação utiliza o threshold de **0,60**
-para abrir um alerta previsto; faixas de 0,85 e 0,95 priorizam alertas altos e
-críticos. A view histórica `v_fraud_predictions` usa outro modelo (V1) e traz
-o threshold próprio de 0,33; ela não é a evidência de produção do B1 V2.
+O threshold operacional único do laboratório é **0,60**. A operação abre um
+alerta previsto quando `fraud_probability >= 0,60`; faixas de 0,85 e 0,95
+priorizam alertas altos e críticos. A view `v_fraud_predictions` também usa os
+scores B1 V2 e o mesmo corte de 0,60.
 
 ## Comunicação do score
 
@@ -78,8 +77,8 @@ memória do chat dura apenas a sessão.
 ## Publicação vetorial aprovada para a demo
 
 Esta fonte foi revisada e publicada como
-`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf`. O Vector Store ativo é
-`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`, carregado com
+`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf`. O Vector Store ativo é
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823`, carregado com
 `cohere.embed-v4.0` no OCI Generative AI (GPU). As respostas usam
 `meta.llama-3.3-70b-instruct` e devem informar citações. O embedding da
 consulta precisa ser o mesmo da carga: `cohere.embed-v4.0`.

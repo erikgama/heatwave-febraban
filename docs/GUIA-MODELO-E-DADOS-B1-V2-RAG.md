@@ -87,18 +87,18 @@ is_weekend
 
 O arquivo `test` permaneceu isolado até o final. Dentro de `train`, o desenvolvimento usou transações anteriores a `2020-03-06 07:16:43` e a validação usou o período posterior.
 
-O treinamento final usou as 1.296.675 linhas de `fraud_ml.features_manual_b1_train_full_v2`, foi otimizado por F1 e levou aproximadamente 80,6 minutos. O valor `0,27` foi escolhido na validação histórica e congelado para aquele teste; ele não é o threshold da simulação atual.
+O treinamento final usou as 1.296.675 linhas de `fraud_ml.features_manual_b1_train_full_v2`, foi otimizado por F1 e levou aproximadamente 80,6 minutos. Para o laboratório, o threshold operacional único é `0,60`.
 
 | Métrica | Validação temporal | Teste final isolado |
 | --- | ---: | ---: |
-| Precisão | 78,48% | 69,61% |
-| Recall | 76,59% | 73,57% |
-| F1 | 0,7753 | 0,7153 |
+| Precisão | — | 83,30% |
+| Recall | — | 61,86% |
+| F1 | — | 0,7100 |
 | ROC AUC | 0,9967 | 0,9947 |
-| Alertas | 1.501 | 2.267 |
-| TP / FP / TN / FN | 1.178 / 323 / 257.474 / 360 | 1.578 / 689 / 552.885 / 567 |
+| Alertas | — | 1.593 |
+| TP / FP / TN / FN | — | 1.327 / 266 / 553.308 / 818 |
 
-No teste final, 1.578 dos 2.267 alertas coincidiram com rótulo sintético 1; 567 registros com rótulo 1 ficaram abaixo do threshold. Essa é uma escolha de operação entre cobertura e volume para revisão humana.
+No teste final no corte de 60%, 1.327 dos 1.593 alertas coincidiram com rótulo sintético 1; 818 registros com rótulo 1 ficaram abaixo do threshold. Esta é a escolha de operação adotada para o laboratório entre cobertura e volume para revisão humana.
 
 ### 4.3 Predição de uma nova compra
 
@@ -122,7 +122,7 @@ CALL sys.ML_PREDICT_ROW(
 SELECT @prediction;
 ```
 
-Na simulação ao vivo, a regra operacional é `fraud_probability >= 0,60`. Portanto, a comunicação correta é “alerta de risco previsto acima do threshold operacional de 60%”. O valor 0,27 é apenas referência de validação histórica.
+Na simulação ao vivo, a regra operacional é `fraud_probability >= 0,60`. Portanto, a comunicação correta é “alerta de risco previsto acima do threshold operacional de 60%”.
 
 ## 5. Banco vetorial e RAG
 
@@ -130,8 +130,8 @@ O RAG é usado para perguntas sobre documentação, modelo, métricas, limites e
 
 | Elemento | Configuração aprovada |
 | --- | --- |
-| Documento | `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf` no Object Storage OCI |
-| Vector Store | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823` |
+| Documento | `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf` no Object Storage OCI |
+| Vector Store | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823` |
 | Embedding | `cohere.embed-v4.0` via OCI Generative AI (GPU) |
 | Geração | `meta.llama-3.3-70b-instruct` via OCI Generative AI |
 | Rotina | `sys.ML_RAG` com oito citações |
@@ -139,9 +139,8 @@ O RAG é usado para perguntas sobre documentação, modelo, métricas, limites e
 
 O documento é dividido em segmentos, transformados em vetores e recuperados pela proximidade semântica da pergunta. O LLM recebe os trechos recuperados e produz uma resposta com citações.
 
-Os stores anteriores são mantidos como histórico. Eles não devem ser usados pela
-demo porque recuperavam uma versão anterior do documento. O store revisado foi
-validado para responder o threshold operacional de 60% e as sete features B1.
+Use exclusivamente o store REV3 na demo. Ele foi revisado para responder o
+threshold operacional de 60% e as sete features B1.
 
 ## 6. Arquitetura do agente para OpenCode/Codex
 
@@ -224,8 +223,7 @@ Estas são sugestões de atividades para deixar visíveis na apresentação e na
 - Modelos GenAI: [modelos e idiomas suportados](https://dev.mysql.com/doc/heatwave/en/mys-hw-genai-supported-models.html).
 - Modelo e métricas: `docs/RESULTADOS-MODELO-B1-V2.md`.
 - Avaliação RAG: `docs/VALIDACAO-RAG-MODELO-B1-V2.md`.
-- Scripts ativos de RAG: `database/rag/15_load_model_document_gpu_rev2.sql` e
-  `database/rag/16_validate_gpu_rev2.sql`. Os scripts CPU anteriores são
-  histórico de diagnóstico e não devem configurar a demo.
+- Scripts ativos de RAG: `database/rag/17_load_model_document_gpu_rev3_threshold_060.sql`
+  e `database/rag/18_validate_gpu_rev3_threshold_060.sql`.
 
 Qualquer alteração em features, threshold, dados, modelo ou Vector Store exige atualização deste guia e nova bateria de validação antes de ser apresentada ao visitante.

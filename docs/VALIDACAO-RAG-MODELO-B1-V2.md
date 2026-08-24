@@ -1,18 +1,16 @@
 # Validação RAG - modelo B1 V2
 
-> **Histórico e substituição:** esta página preserva evidências de testes de
-> 10–11/08/2026, inclusive stores CPU e versões GPU que descreviam cinco
-> features. Elas não são a configuração da demo atual. Para implantação, use
-> somente `database/rag/15_load_model_document_gpu_rev2.sql` e a validação
-> `database/rag/16_validate_gpu_rev2.sql`.
+> Para implantação, use somente
+> `database/rag/17_load_model_document_gpu_rev3_threshold_060.sql` e
+> `database/rag/18_validate_gpu_rev3_threshold_060.sql`.
 
 ## Configuração vigente — revisão 23/08/2026
 
 | Item | Configuração aprovada |
 | --- | --- |
-| PDF | `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf` |
-| Origem | `oci://demo@idi1o0a010nx/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf` |
-| Vector Store | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823` |
+| PDF | `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf` |
+| Origem | `oci://demo@idi1o0a010nx/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf` |
+| Vector Store | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823` |
 | Embedding | `cohere.embed-v4.0`, OCI Generative AI (GPU) |
 | Geração | `meta.llama-3.3-70b-instruct`, OCI Generative AI (GPU) |
 | Contrato documentado | sete features; `is_fraud` não é entrada de inferência |
@@ -20,10 +18,8 @@
 
 A revisão foi carregada e validada com o usuário `febraban` nos três DB
 Systems do laboratório. As perguntas de aceite são: (1) “Qual é o threshold
-operacional e como ele difere de 0,27?” e (2) “Quais são exatamente as sete
-features e `is_fraud` é enviado?”. Ambas precisam retornar citações do PDF
-REV2. O valor `0,27` permanece apenas como referência de validação histórica,
-nunca como regra do dashboard.
+operacional único?” e (2) “Quais são exatamente as sete features e `is_fraud`
+é enviado?”. Ambas precisam retornar citações do PDF REV3.
 
 ---
 
@@ -67,7 +63,7 @@ persistidas em `febraban_rag.ml_rag_validation_gpu`.
 | Caso | Resultado | Verificação |
 | --- | --- | --- |
 | Features efetivamente selecionadas | Aprovado | Retornou exatamente `amount`, `amount_log`, `category`, `customer_merchant_distance_km` e `transaction_hour`; não citou B2. |
-| Threshold e métricas | Aprovado | Informou threshold `0,27`, desbalanceamento de aproximadamente `0,521%` e priorização de precisão, recall, F1 e ROC AUC. |
+| Threshold e métricas | Aprovado | Informou threshold `0,60`, desbalanceamento de aproximadamente `0,521%` e priorização de precisão, recall, F1 e ROC AUC. |
 | Contrato de nova predição | Aprovado | Informou os cinco campos, excluiu `is_fraud` e explicou `amount_log = LN(1 + amount)`. |
 | Limite de B2 | Aprovado | Confirmou que B2 foi preparado, não entrou no B1 e não explica o score atual. |
 

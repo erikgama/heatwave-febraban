@@ -236,9 +236,8 @@ LIMIT 10;
 ```
 
 Compare thresholds com precisão, recall, F1, ROC AUC, alertas e matriz de
-confusão. A validação histórica deste laboratório registrou o threshold `0.27`;
-a interface da demonstração ao vivo usa o corte operacional de `0.60`. Nenhum
-dos dois deve ser copiado sem validação local. Acurácia isolada não é adequada para uma classe positiva
+confusão. A demonstração e as predições públicas usam o corte operacional único
+de `0.60`. Acurácia isolada não é adequada para uma classe positiva
 perto de 0,5%. Depois de congelar o threshold, treine o modelo final com todo
 `train_final` e avalie-o **uma única vez** em `test_final`:
 
@@ -328,7 +327,7 @@ SELECT JSON_PRETTY(@rag_answer);
 ```
 
 No laboratório publicado, a fonte ativa é
-`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`: PDF revisado,
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823`: PDF vigente,
 `cohere.embed-v4.0` para embeddings e `meta.llama-3.3-70b-instruct` para a
 resposta. Use sempre o mesmo `embed_model_id` da carga ao consultar o store.
 

@@ -47,10 +47,10 @@ O NL_SQL recebe somente estas views do schema `fraud_demo_public`:
 Assim, metadados da tabela bruta, tabelas de sistema e qualquer outro schema
 não entram no contexto de geração.
 
-`v_fraud_predictions` existe no schema público, porém contém predições
-históricas do modelo V1 e threshold 0,33. Ela não integra a allowlist atual do
-NL_SQL, para não misturar esse histórico com o B1 V2 e a regra operacional de
-60% usada na simulação.
+`v_fraud_predictions` existe no schema público e contém scores B1 V2 do split
+de teste, com threshold operacional de 0,60. Ela pode ser incluída na
+allowlist do NL_SQL quando a experiência precisar investigar predições
+históricas; mantenha `v_live_transaction_events` como fonte da rodada ao vivo.
 
 ## Roteamento unificado: SQL, RAG e memória
 

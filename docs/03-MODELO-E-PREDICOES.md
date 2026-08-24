@@ -62,8 +62,8 @@ palco.
 Rode `ML_PREDICT_TABLE` sobre validação e extraia a probabilidade da classe `1`
 do JSON `ml_results`. Compare thresholds com precisão, recall, F1, ROC AUC,
 volume de alertas e matriz de confusão. Congele o threshold na validação e só
-então avalie uma vez no split de teste. `0.27` foi uma referência deste
-laboratório, não uma regra universal. Acurácia sozinha é inadequada para uma
+então avalie uma vez no split de teste. O laboratório usa o threshold
+operacional único de `0.60`. Acurácia sozinha é inadequada para uma
 classe positiva próxima de 0,5%.
 
 ```sql

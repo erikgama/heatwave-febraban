@@ -72,10 +72,9 @@ atualiza a tabela de eventos com:
 - `fraud_probability` — probabilidade da classe positiva;
 - `risk_band` — baixo, atenção, alto ou crítico.
 
-O threshold operacional da simulação é `0,60`: um evento só entra no contador
-de alertas quando `fraud_probability >= 0.60`. As faixas `0,85` e `0,95`
-apenas priorizam alertas altos e críticos. O valor `0,27` pertence ao
-experimento de validação B1 e não pode ser apresentado como regra da demo.
+O threshold operacional único da simulação é `0,60`: um evento só entra no
+contador de alertas quando `fraud_probability >= 0.60`. As faixas `0,85` e
+`0,95` apenas priorizam alertas altos e críticos.
 
 ## Evidência de desempenho
 

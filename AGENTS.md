@@ -19,17 +19,16 @@ Este laboratório já foi validado com a cópia do modelo pertencente a
 `febraban`. Ao implementar ou alterar uma experiência, trate os itens abaixo
 como contrato, não como sugestões:
 
-- o modelo ativo é o B1 V2 no catálogo `ML_SCHEMA_febraban`, e não o modelo V1
-  exposto pela view histórica `v_fraud_predictions`;
+- o modelo ativo é o B1 V2 no catálogo `ML_SCHEMA_febraban`; a view pública
+  `v_fraud_predictions` também publica exclusivamente os seus scores de teste;
 - o B1 recebe **sete** features: `amount`, `amount_log`, `category`,
   `transaction_hour`, `weekday_number`, `is_weekend` e
   `customer_merchant_distance_km`;
 - `is_fraud` é apenas o target histórico. Nunca faz parte do payload de uma
   nova predição;
-- o alerta operacional da simulação é `fraud_probability >= 0.60`. Os valores
-  0,27 e 0,33 pertencem, respectivamente, a uma avaliação experimental B1 e a
-  uma view histórica de outro modelo; não devem aparecer na interface ou na
-  explicação da simulação;
+- o threshold operacional único do laboratório é
+  `fraud_probability >= 0.60`; use este corte em interfaces, consultas,
+  documentação, alertas e explicações;
 - o fluxo existente grava em `fraud_demo.live_transaction_events`, usa
   `fraud_demo.live_transaction_seed` como semente e deve isolar cada rodada
   por `run_id`;
@@ -115,7 +114,7 @@ sensíveis e usam nomes de negócio.
 | `v_merchant_summary` | estabelecimento + categoria | `merchant_name`, `category`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. Use volume mínimo em rankings de taxa. |
 | `v_state_summary` | estado | `state`, `transaction_count`, `labeled_fraud_count`, `labeled_fraud_pct`, `total_amount`. |
 | `v_live_transaction_events` | evento simulado | `run_id`, `event_id`, contexto da compra, `model_prediction`, `fraud_probability` e `risk_band`. Para fluxo atual, filtre sempre pelo `run_id` ativo. |
-| `v_fraud_predictions` | predição histórica | Scores de **outro modelo**, `febraban_fraud_final_f1_v1_20260809`, com threshold gravado `0,33`. Não é a fonte do B1 V2 nem da simulação atual. |
+| `v_fraud_predictions` | predição B1 V2 no split de teste | `fraud_probability`, `model_risk_alert`, `decision_threshold=0.60` e o handle `febraban_fraud_manual_xgb_b1_final_v2_20260810`. Use para investigar a avaliação histórica do modelo. |
 
 ### Colunas da origem `fraud_demo.transactions_raw`
 
@@ -205,9 +204,8 @@ são auditoria, não features.
   fraude.
 - Threshold operacional da simulação: **60%** (`fraud_probability >= 0.60`).
 - 85% e 95% são faixas de priorização visual de alertas altos e críticos.
-- Há referência de `0,27` no experimento de validação B1 e de `0,33` na view
-  histórica `v_fraud_predictions` (modelo V1). Nenhum dos dois substitui a
-  regra operacional atual da simulação.
+- O threshold operacional único do laboratório é `0,60`; qualquer cálculo de
+  alerta, explicação de risco ou exemplo de predição deve usar este valor.
 - Para qualidade, use precisão, recall, F1, ROC AUC, matriz de confusão e
   volume de alertas. Acurácia isolada engana em classes raras.
 
@@ -243,24 +241,21 @@ Configuração publicada e validada para a demo:
 | Embedding dos trechos e da pergunta | `cohere.embed-v4.0`, OCI Generative AI (GPU) |
 | Geração da resposta RAG | `meta.llama-3.3-70b-instruct`, OCI Generative AI (GPU) |
 | Rotina | `sys.ML_RAG` |
-| Vector Store técnico de referência | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823` |
+| Vector Store técnico de referência | `febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823` |
 
 Os stores anteriores com `cpu_e5` e versões anteriores de `oci_embed_v4` são
 histórico de testes e podem recuperar cinco features ou o texto antigo. Não os
 use como padrão. Sempre informe `embed_model_id='cohere.embed-v4.0'` ao chamar
 `ML_RAG`, pois a pergunta precisa usar o mesmo modelo de embedding do store.
 
-Alguns stores históricos são tabelas Lakehouse com `SECONDARY_LOAD=0`; um
-`SELECT` direto nelas pode retornar erro `3877` de tabela não carregada. Isso
-não é evidência de falha do RAG ativo. Para auditoria, use
-`information_schema.TABLES`/`SHOW TABLES`; para a prova funcional, chame
-`ML_RAG` exclusivamente com o store REV2 ativo.
+Para a prova funcional, chame `ML_RAG` exclusivamente com o store REV3 ativo.
+Não use stores de revisão anterior como fonte de resposta.
 
-O PDF ativo é `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf`. Ele descreve
-as **sete** features e distingue `0,27` (validação histórica) de `0,60`
-(threshold operacional da simulação). Antes de publicar uma nova versão,
-gere um PDF novo, crie um Vector Store novo e valide essas duas perguntas
-críticas antes de alterar a configuração da aplicação.
+O PDF ativo é `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf`. Ele descreve
+as **sete** features e o threshold operacional único de `0,60`. Antes de
+publicar uma nova versão, gere um PDF novo, crie um Vector Store novo e valide
+as respostas sobre features e threshold antes de alterar a configuração da
+aplicação.
 
 Use **ML_RAG** para perguntas documentais, como:
 

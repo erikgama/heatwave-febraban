@@ -177,8 +177,8 @@ estratégia operacional da demo classifica janelas de 5.000 eventos com
 `ML_PREDICT_TABLE` e persiste os resultados por `run_id`.
 
 O PDF e Vector Store ativos já estão alinhados ao contrato de sete features:
-`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf` e
-`febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`. Não reutilize os stores
+`GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf` e
+`febraban_rag.modelo_b1_v2_oci_embed_v4_rev3_20260823`. Não reutilize os stores
 históricos com cinco features.
 
 Se `ML_PREDICT_TABLE` ou `ML_MODEL_LOAD` retornar erro de catálogo, faça o
@@ -227,11 +227,11 @@ novo, sem sobrescrever stores anteriores:
 
 ```sql
 CALL sys.VECTOR_STORE_LOAD(
-  'oci://<BUCKET>@<NAMESPACE>/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf',
+  'oci://<BUCKET>@<NAMESPACE>/febraban/GUIA-MODELO-E-DADOS-B1-V2-RAG-REV3-20260823.pdf',
   JSON_OBJECT(
     'schema_name', 'febraban_rag',
-    'table_name', 'modelo_b1_v2_oci_embed_v4_rev2_<IDENTIFICADOR_DO_CLONE>',
-    'task_name', 'febraban_rag_gpu_rev2_<IDENTIFICADOR_DO_CLONE>',
+    'table_name', 'modelo_b1_v2_oci_embed_v4_rev3_<IDENTIFICADOR_DO_CLONE>',
+    'task_name', 'febraban_rag_gpu_rev3_<IDENTIFICADOR_DO_CLONE>',
     'language', 'pt',
     'embed_model_id', 'cohere.embed-v4.0',
     'description', 'Guia B1 V2 revisado: sete features e threshold operacional 0.60; embedding OCI GPU.'
@@ -261,8 +261,8 @@ CALL sys.ML_RAG(
 SELECT JSON_PRETTY(@rag_output);
 ```
 
-Esperado: texto que informa `0,60` como threshold operacional e explica que
-`0,27` é referência histórica de validação, sempre com citações. Registre o
+Esperado: texto que informa `0,60` como threshold operacional único, sempre
+com citações. Registre o
 nome real do store em `HEATWAVE_RAG_VECTOR_STORE` e
 `cohere.embed-v4.0` em `HEATWAVE_RAG_EMBED_MODEL` na VM.
 
