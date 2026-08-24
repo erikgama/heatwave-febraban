@@ -169,6 +169,13 @@ Esperado: JSON com a previsão e probabilidades. No clone validado em
 22/08/2026, a cópia do modelo pertencente a `febraban` exige as sete features
 acima. `is_fraud` é o target histórico e **não** entra em uma nova predição.
 
+Use este `ML_PREDICT_ROW` apenas como smoke test de uma compra. Para o fluxo de
+maior volume — validação, scoring em produção ou a simulação da demo — carregue
+o modelo uma vez e execute `ML_PREDICT_TABLE` sobre uma tabela de estágio/lote.
+Não implemente uma fila grande como loop de chamadas `ML_PREDICT_ROW`; a
+estratégia operacional da demo classifica janelas de 5.000 eventos com
+`ML_PREDICT_TABLE` e persiste os resultados por `run_id`.
+
 O PDF e Vector Store ativos já estão alinhados ao contrato de sete features:
 `GUIA-MODELO-E-DADOS-B1-V2-RAG-REV2-20260823.pdf` e
 `febraban_rag.modelo_b1_v2_oci_embed_v4_rev2_20260823`. Não reutilize os stores

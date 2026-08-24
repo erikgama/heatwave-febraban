@@ -94,10 +94,25 @@ ajustar o threshold ou features.
 CALL sys.ML_MODEL_LOAD(@model,NULL);
 SELECT sys.ML_PREDICT_ROW(JSON_OBJECT(
  'amount',1200.00,'amount_log',LN(1201.00),'category','shopping_net',
- 'transaction_hour',2,'customer_merchant_distance_km',15.8), @model,NULL) AS prediction;
+ 'transaction_hour',2,'weekday_number',2,'is_weekend',0,
+ 'customer_merchant_distance_km',15.8), @model,NULL) AS prediction;
 ```
 
-Para eventos ao vivo, pontue lotes com `ML_PREDICT_TABLE` e persista score,
-faixa de risco, timestamp e `run_id` em tabela isolada. O modelo precisa estar
-carregado e fica ativo até unload ou reinício do cluster; monitore com
-`ML_MODEL_ACTIVE` e não dispare cargas duplicadas.
+### `ML_PREDICT_ROW` x `ML_PREDICT_TABLE`
+
+`ML_PREDICT_ROW` recebe **um** objeto JSON e retorna o resultado dessa única
+predição. É a escolha correta para smoke tests, validação do contrato de
+features, depuração e uma simulação isolada de compra. Não o chame em loop para
+uma fila grande: isso multiplica round-trips e custo de orquestração.
+
+`ML_PREDICT_TABLE` recebe uma tabela de origem e grava uma tabela de destino
+com os resultados. É a escolha recomendada para validação, teste e produção em
+maior volume: um lote de eventos entra em uma tabela de estágio, é classificado
+em uma chamada e os scores são persistidos para dashboard e investigação.
+
+Para eventos ao vivo, carregue o modelo uma vez e pontue lotes com
+`ML_PREDICT_TABLE`, persistindo score, faixa de risco, timestamp e `run_id` em
+tabela isolada. A demo usa janelas de 5.000 eventos; ajuste o tamanho do lote à
+capacidade do DB System, sem trocar a estratégia por milhares de chamadas a
+`ML_PREDICT_ROW`. O modelo fica ativo até unload ou reinício do cluster;
+monitore com `ML_MODEL_ACTIVE` e não dispare cargas duplicadas.

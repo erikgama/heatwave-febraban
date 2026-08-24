@@ -7,6 +7,9 @@ executar qualquer comando. A base, o cluster analítico, o modelo de risco e a
 documentação vetorizada **já existem**. Não recrie, reimporte, retreine,
 descarregue ou apague esses recursos por padrão.
 
+Referência pública do laboratório e dos runbooks:
+<https://github.com/erikgama/heatwave-febraban>.
+
 O visitante usa Codex para entender os assets prontos e criar algo novo sobre
 eles somente quando solicitado.
 
@@ -157,6 +160,21 @@ Objetos com `B2` são experimento/evolução futura. O modelo ativo da demo é B
 | Target | `is_fraud`, rótulo histórico sintético |
 | Saída | classe prevista e probabilidade da classe positiva histórica |
 | Uso | `ML_PREDICT_ROW` para um evento e `ML_PREDICT_TABLE` para lotes |
+
+### Escolha da rotina de predição
+
+| Rotina | Entrada e retorno | Quando usar | Regra do laboratório |
+| --- | --- | --- | --- |
+| `sys.ML_PREDICT_ROW` | um objeto JSON; retorna um JSON com classe e probabilidades | smoke test, depuração de contrato e simulação isolada de uma compra | usar para confirmar que o modelo carregado aceita as sete features; não executar em loop para uma fila grande |
+| `sys.ML_PREDICT_TABLE` | uma tabela de origem; grava uma tabela de destino com o resultado | validação, teste e scoring operacional de muitos eventos | **padrão para alto fluxo**: pontuar cada lote de eventos novos, persistir resultado, `run_id` e faixas de risco |
+
+Para uma única transação, `ML_PREDICT_ROW` facilita inspecionar o payload e a
+resposta. Para centenas ou milhares de eventos, o custo de criar uma chamada por
+linha torna o fluxo mais lento e menos estável: carregue o modelo uma vez e use
+`ML_PREDICT_TABLE` sobre uma tabela de estágio/lote. Na simulação da demo, a
+janela operacional é de 5.000 eventos por rodada de classificação; o tamanho
+final do lote pode ser ajustado à capacidade do DB System, mas a rotina continua
+sendo `ML_PREDICT_TABLE`, nunca um loop de `ML_PREDICT_ROW`.
 
 ### Features efetivamente usadas por B1
 
