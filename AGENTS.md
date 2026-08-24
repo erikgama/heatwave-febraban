@@ -52,6 +52,47 @@ System por vez e execute uma rodada real. O aceite exige `inserted = scored =
 `MySQL HeatWave · NL_SQL` com `run_id` no SQL auditável. O histórico da última
 reexecução local dos três bancos está no QA canônico.
 
+### Preflight de runtime: não assumir estado após restart
+
+Os recursos abaixo já foram provisionados, mas o estado de memória é runtime:
+depois de restart do DB System ou do HeatWave Cluster, **não assuma** que uma
+tabela continua no secondary engine ou que o modelo continua carregado. Antes
+de iniciar dashboard, RAG ou classificação, valide em modo somente leitura:
+
+```sql
+SELECT model_handle, model_owner, task, column_names
+FROM ML_SCHEMA_febraban.MODEL_CATALOG
+WHERE model_handle = 'fraud_risk_model';
+
+SELECT i.SCHEMA_NAME, i.TABLE_NAME, t.LOAD_STATUS, t.LOAD_PROGRESS
+FROM performance_schema.rpd_table_id i
+JOIN performance_schema.rpd_tables t ON t.ID = i.ID
+WHERE (i.SCHEMA_NAME = 'fraud_demo' AND i.TABLE_NAME IN
+         ('transactions_raw', 'live_transaction_seed', 'live_transaction_events'))
+   OR (i.SCHEMA_NAME = 'fraud_ml' AND i.TABLE_NAME IN
+         ('live_scoring_stage', 'live_scoring_result'));
+```
+
+Se o modelo não estiver carregado, o processo de serviço autorizado pode
+executar `CALL sys.ML_MODEL_LOAD('fraud_risk_model', NULL)` antes do primeiro
+`ML_PREDICT_TABLE`. Não carregue/descarregue o modelo a cada lote. Se uma
+tabela necessária não estiver carregada, pare e informe o estado ao usuário
+antes de executar analytics com `FORCED`.
+
+### Mapa operacional: não misturar engines nem conexões
+
+| Fluxo | Sessão / engine | Objetos principais | Regra |
+| --- | --- | --- | --- |
+| Dashboard e agregações | pool dedicado, `use_secondary_engine = FORCED` | views de `fraud_demo_public` | Somente `SELECT`; exige tabela carregada e query elegível no HeatWave. |
+| Ingestão de eventos | pool/conexão separado, `use_secondary_engine = OFF` | `fraud_demo.live_transaction_events` | Inserir somente em uma rodada autorizada, identificada por `run_id`. |
+| Scoring em lote | conexão de serviço, `OFF` + HeatWave ML | `fraud_ml.live_scoring_stage`, `fraud_ml.live_scoring_result` | Usar `ML_PREDICT_TABLE`; um worker por staging compartilhada. |
+| Investigação documental | conexão primária, `OFF` | `febraban_rag.fraud_risk_knowledge_base` | Usar `sys.ML_RAG` com `cohere.embed-v4.0`; não consultar fatos transacionais por RAG. |
+| Perguntas sobre dados | conexão primária, `OFF` para gerar/executar SQL seguro | views de `fraud_demo_public` | Usar `sys.NL_SQL`, validar o `SELECT` e mostrar o SQL executado. |
+
+Ingestão e dashboard podem ocorrer em paralelo porque usam sessões e pools
+separados. Nunca execute DML na mesma sessão que foi configurada com
+`use_secondary_engine = FORCED`.
+
 ## Acesso deste notebook — preencher somente no evento
 
 > Este bloco é local e temporário. Preencha no notebook do evento; não envie ao
