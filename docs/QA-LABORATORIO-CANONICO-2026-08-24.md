@@ -42,6 +42,30 @@ A memória da sessão respondeu ao acompanhamento sem executar SQL adicional.
 O RAG retornou citações e afirmou corretamente que score representa risco
 previsto, não fraude confirmada.
 
+## Reexecução local da tela — três DB Systems
+
+Em 24/08/2026, a mesma aplicação foi iniciada localmente, um DB System por
+vez, usando exclusivamente o usuário `febraban`. O teste acionou a rota da
+interface para iniciar uma rodada real, acompanhou os checkpoints de
+`ML_PREDICT_TABLE`, confirmou o carregamento da tela (`/` HTTP 200), a saúde
+da API e conciliou os cards com SQL direto na view pública. Após a conclusão,
+a pergunta “Quantos alertas foram gerados na simulação atual?” retornou por
+`MySQL HeatWave · NL_SQL`, com `SELECT` auditável filtrado pelo `run_id` da
+rodada e exatamente o mesmo total do card.
+
+| DB System | Run ID validado | Inseridas / classificadas | Alertas `>= 0,60` | Valor conciliado | Falhas de lote / score |
+| --- | --- | ---: | ---: | ---: | --- |
+| `207.211.189.43` | `657df9fd-f7c5-4254-adad-b7373350865f` | 50.000 / 50.000 | 632 | US$ 6.768.455,03 | 0 / 0 |
+| `207.211.177.73` | `88a6375e-4057-4f52-af46-d547f91f84a2` | 50.000 / 50.000 | 627 | US$ 6.739.176,92 | 0 / 0 |
+| `164.152.31.115` | `f70111df-cc5c-4cb5-a5f4-f2ac85420fa9` | 50.000 / 50.000 | 661 | US$ 6.808.944,70 | 0 / 0 |
+
+Uma primeira tentativa preliminar no banco primário registrou uma falha TLS
+transitória de conexão e reexecutou o lote com sucesso. Ela não foi usada como
+aceite: a rodada listada na tabela foi repetida integralmente e passou com zero
+falhas. A aplicação também limpa `lastError` quando um retry de ingestão é
+recuperado, evitando que a interface apresente um erro técnico antigo como se a
+rodada concluída estivesse em falha.
+
 ## Decisão de nomenclatura
 
 O laboratório passa a expor apenas nomes canônicos. Artefatos físicos antigos

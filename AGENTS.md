@@ -45,6 +45,13 @@ ML_RAG GPU e memória; consulte `docs/QA-LABORATORIO-CANONICO-2026-08-24.md`
 para os critérios e evidências. Refaça esse QA após qualquer mudança de modelo,
 Vector Store, permissões, serviço da VM ou fluxo de simulação.
 
+Para uma validação local da tela, inicie a aplicação apontando para **um** DB
+System por vez e execute uma rodada real. O aceite exige `inserted = scored =
+50000`, `failedBatches = scoringFailures = 0`, cards conciliados com
+`v_live_transaction_events` e ao menos uma pergunta pós-rodada respondida por
+`MySQL HeatWave · NL_SQL` com `run_id` no SQL auditável. O histórico da última
+reexecução local dos três bancos está no QA canônico.
+
 ## Acesso deste notebook — preencher somente no evento
 
 > Este bloco é local e temporário. Preencha no notebook do evento; não envie ao
